@@ -37,7 +37,7 @@ resource "azurerm_role_assignment" "current_user_blob" {
 
 # Storage account for state
 resource "azurerm_storage_account" "state" {
-  name                = "sts${var.project}state${random_string.this.result}"
+  name                = "sts${var.project}state${var.environment}${random_string.this.result}"
   location            = var.region
   resource_group_name = azurerm_resource_group.state.name
 
@@ -76,7 +76,7 @@ resource "azurerm_storage_account" "state" {
 
 # Create container in the storage account for state
 resource "azurerm_storage_container" "this" {
-  name                  = "${var.project}-state-management"
+  name                  = "${var.project}-state-management-${var.environment}"
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = var.container_access_type
 }
