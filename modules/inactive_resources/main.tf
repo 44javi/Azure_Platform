@@ -16,7 +16,7 @@ locals {
   default_tags = {
     owner       = var.owner
     environment = var.environment
-    client      = var.client
+    project      = var.project
     region      = var.region
     created_by  = "Terraform"
   }
@@ -30,13 +30,13 @@ resource "random_string" "this" {
 }
 
 
-data "azurerm_client_config" "current" {}
+data "azurerm_project_config" "current" {}
 
 # Storage Blob Data Contributor - for state file operations
 resource "azurerm_role_assignment" "current_user_blob" {
   scope                = azurerm_storage_account.state.id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = data.azurerm_project_config.current.object_id
 }
 
 # Storage account for state
@@ -324,10 +324,10 @@ module "jobs" {
     databricks = databricks
   }
 
-  client                    = var.client
+  project                    = var.project
   environment                    = var.environment
-  databricks_identity_id = azurerm_user_assigned_identity.databricks.client_id
-  tenant_id                 = data.azurerm_client_config.current.tenant_id
+  databricks_identity_id = azurerm_user_assigned_identity.databricks.project_id
+  tenant_id                 = data.azurerm_project_config.current.tenant_id
   notebook_path            = databricks_notebook.gzip_to_parquet.path
   storage_account_name     = azurerm_storage_account.adls.name
   bronze_container         = var.bronze_container
@@ -360,11 +360,11 @@ locals {
         "GOLD_CONTAINER_NAME",
         var.gold_container
       ),
-      "MANAGED_IDENTITY_CLIENT_ID",
-      azurerm_user_assigned_identity.databricks.client_id
+      "MANAGED_IDENTITY_project_ID",
+      azurerm_user_assigned_identity.databricks.project_id
     ),
     "TENANT_ID",
-    data.azurerm_client_config.current.tenant_id
+    data.azurerm_project_config.current.tenant_id
   )
 }
 

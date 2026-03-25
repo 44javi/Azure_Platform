@@ -16,7 +16,7 @@ terraform {
 
 # Unity Catalog Access Connector
 resource "azurerm_databricks_access_connector" "unity" {
-  name                = "uc-connector-${var.client}-${var.environment}"
+  name                = "uc-connector-${var.project}-${var.environment}"
   resource_group_name = var.resource_group_name
   location            = var.region
   identity {
@@ -51,7 +51,7 @@ resource "azurerm_role_assignment" "unity_eventsubscription" {
 }
 
 resource "databricks_storage_credential" "unity" {
-  name = "dbx_${var.client}_unity_credential"
+  name = "dbx_${var.project}_unity_credential"
   azure_managed_identity {
     access_connector_id = azurerm_databricks_access_connector.unity.id
   }
@@ -60,8 +60,8 @@ resource "databricks_storage_credential" "unity" {
 # Catalog
 resource "databricks_catalog" "main" {
   provider     = databricks.workspace_resources
-  name         = "catalog_${var.client}_${var.environment}"
-  comment      = "Catalog for client"
+  name         = "catalog_${var.project}_${var.environment}"
+  comment      = "Catalog for project"
   storage_root = databricks_external_location.this["catalog"].url
 
   properties = {
@@ -99,9 +99,9 @@ resource "databricks_system_schema" "this" {
 data "databricks_current_user" "me" {}
 
 resource "databricks_sql_endpoint" "sql_warehouse" {
-  name = "sql_w_${var.client}_${var.environment}"
+  name = "sql_w_${var.project}_${var.environment}"
 
-  cluster_size     = var.sqlw_cluster_size 
+  cluster_size     = var.sqlw_cluster_size
   min_num_clusters = var.sqlw_min_clusters
   max_num_clusters = var.sqlw_max_clusters
   auto_stop_mins   = var.sqlw_auto_stop_mins

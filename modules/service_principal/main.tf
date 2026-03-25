@@ -1,11 +1,11 @@
 # Service principal module
 
-# Get current client configuration
+# Get current project configuration
 data "azurerm_client_config" "current" {}
 
 # Create Azure AD Application
 resource "azuread_application" "this" {
-  display_name = "sp-${var.client}-${var.environment}"
+  display_name = "sp-${var.project}-${var.environment}"
   owners       = [data.azurerm_client_config.current.object_id]
 
   # Optional: Add API permissions if needed
@@ -20,14 +20,14 @@ resource "azuread_application" "this" {
 
 # Create Service Principal
 resource "azuread_service_principal" "this" {
-  client_id                    = azuread_application.this.client_id
+  client_id                   = azuread_application.this.client_id
   app_role_assignment_required = false
   owners                       = [data.azurerm_client_config.current.object_id]
 }
 
 # Create certificate in Key Vault 
 resource "azurerm_key_vault_certificate" "sp_cert" {
-  name         = "cert-${var.client}-${var.environment}"
+  name         = "cert-${var.project}-${var.environment}"
   key_vault_id = var.key_vault_id
 
   certificate_policy {
@@ -72,7 +72,7 @@ resource "azurerm_key_vault_certificate" "sp_cert" {
         dns_names = []
       }
 
-      subject            = "CN=${var.client}-${var.environment}"
+      subject            = "CN=${var.project}-${var.environment}"
       validity_in_months = 1
     }
   }
@@ -80,7 +80,7 @@ resource "azurerm_key_vault_certificate" "sp_cert" {
 
 # Associate certificate with the service principal
 resource "azuread_application_certificate" "sp_cert" {
-  application_id    = azuread_application.this.id
+  application_id = azuread_application.this.id
   type           = "AsymmetricX509Cert"
   encoding       = "hex" # Recommended when integrating with key vault 
   value          = azurerm_key_vault_certificate.sp_cert.certificate_data
@@ -88,7 +88,7 @@ resource "azuread_application_certificate" "sp_cert" {
 
   lifecycle {
     create_before_destroy = true
-    replace_triggered_by = [ azurerm_key_vault_certificate.sp_cert.certificate_data ]
+    replace_triggered_by  = [azurerm_key_vault_certificate.sp_cert.certificate_data]
   }
 }
 

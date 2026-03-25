@@ -1,7 +1,7 @@
 # /modules/databricks_workspace/variables.tf
 
-variable "client" {
-  description = "Client name"
+variable "project" {
+  description = "project name"
   type        = string
 }
 

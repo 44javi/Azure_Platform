@@ -1,8 +1,3 @@
-variable "countries" {
-  description = "Sets the list of countries (Management Groups)"
-  type        = list(string)
-}
-
 variable "root_management_group_id" {
   description = "The ID of the Root Management Group"
   type        = string
@@ -13,8 +8,8 @@ variable "subscription_id" {
   type        = string
 }
 
-variable "client" {
-  description = "Client name for resource naming."
+variable "project" {
+  description = "project name for resource naming."
   type        = string
 }
 

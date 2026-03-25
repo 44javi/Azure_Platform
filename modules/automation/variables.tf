@@ -13,8 +13,8 @@ variable "region" {
   type        = string
 }
 
-variable "client" {
-  description = "Client name for resource naming"
+variable "project" {
+  description = "project name for resource naming"
   type        = string
 }
 

@@ -27,12 +27,12 @@ variable "trusted_ip_ranges" {
 
 variable "region" {
   description = "Region where resources will be created"
-  type = string
+  type        = string
 }
 
-variable "client" {
-  description = "Client name for resource naming"
-  type = string
+variable "project" {
+  description = "project name for resource naming"
+  type        = string
 }
 
 variable "environment" {
@@ -41,6 +41,6 @@ variable "environment" {
 }
 
 variable "default_tags" {
-    description = "Default tags to apply to all resources"
-  type = map(string)
+  description = "Default tags to apply to all resources"
+  type        = map(string)
 }

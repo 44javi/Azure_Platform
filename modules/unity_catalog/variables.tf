@@ -1,7 +1,7 @@
 # /modules/unity_catalog/variables.tf
 
-variable "client" {
-  description = "Client name for resource naming"
+variable "project" {
+  description = "project name for resource naming"
   type        = string
 }
 
@@ -66,7 +66,7 @@ variable "sqlw_cluster_size" {
   description = "Size of the SQL warehouse clusters (2X-Small, X-Small, Small, Medium, Large, X-Large, 2X-Large, 3X-Large, 4X-Large)"
   type        = string
   default     = "2X-Small"
-  
+
   validation {
     condition     = contains(["2X-Small", "X-Small", "Small", "Medium", "Large", "X-Large", "2X-Large", "3X-Large", "4X-Large"], var.sqlw_cluster_size)
     error_message = "Cluster size must be one of: 2X-Small, X-Small, Small, Medium, Large, X-Large, 2X-Large, 3X-Large, 4X-Large"

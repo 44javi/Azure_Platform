@@ -39,20 +39,20 @@ resource "tls_private_key" "this" {
 
 # Place private key in azure key vault
 resource "azurerm_key_vault_secret" "ssh_private" {
-  name         = "${var.client}-private"
+  name         = "${var.project}-private"
   value        = tls_private_key.this.private_key_pem
-  key_vault_id = var.key_vault_id   
+  key_vault_id = var.key_vault_id
 }
 
 resource "azurerm_key_vault_secret" "ssh_public" {
-  name         = "${var.client}-public"
+  name         = "${var.project}-public"
   value        = tls_private_key.this.public_key_openssh
   key_vault_id = var.key_vault_id
 }
 
 # Create the Virtual Machine
 resource "azurerm_linux_virtual_machine" "this" {
-  name                = "vm-${var.client}-${var.environment}"
+  name                = "vm-${var.project}-${var.environment}"
   resource_group_name = var.resource_group_name
   location            = var.region
   size                = "Standard_B1s" #"Standard_D4s_v3"
@@ -61,7 +61,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   identity {
     type = "SystemAssigned"
   }
-  
+
   network_interface_ids = [
     azurerm_network_interface.vm_nic.id,
   ]
@@ -84,73 +84,73 @@ resource "azurerm_linux_virtual_machine" "this" {
     version   = "latest"
   }
 
-# custom_data = base64encode(<<-EOF
-# #!/bin/bash
-# # Script to expand LVM to use full disk on RHEL VMs using percentages
+  # custom_data = base64encode(<<-EOF
+  # #!/bin/bash
+  # # Script to expand LVM to use full disk on RHEL VMs using percentages
 
-# # Write output to log file and terminal
-# exec > >(tee /var/log/disk-expansion.log) 2>&1
-# set -x
+  # # Write output to log file and terminal
+  # exec > >(tee /var/log/disk-expansion.log) 2>&1
+  # set -x
 
-# echo "Starting disk expansion script..."
+  # echo "Starting disk expansion script..."
 
-# # Wait for the system to settle
-# sleep 60
+  # # Wait for the system to settle
+  # sleep 60
 
-# # Auto-detect the correct disk with LVM containing the root filesystem
-# ROOT_MOUNT=$(df -h / | grep dev | awk '{print $1}')
-# ROOT_VG=$(echo $ROOT_MOUNT | cut -d- -f1 | cut -d/ -f4)
-# ROOT_PV=$(pvs | grep $ROOT_VG | awk '{print $1}')
-# ROOT_DISK=$(echo $ROOT_PV | sed 's/[0-9]*$//')
-# ROOT_PART_NUM=$(echo $ROOT_PV | grep -o '[0-9]*$')
+  # # Auto-detect the correct disk with LVM containing the root filesystem
+  # ROOT_MOUNT=$(df -h / | grep dev | awk '{print $1}')
+  # ROOT_VG=$(echo $ROOT_MOUNT | cut -d- -f1 | cut -d/ -f4)
+  # ROOT_PV=$(pvs | grep $ROOT_VG | awk '{print $1}')
+  # ROOT_DISK=$(echo $ROOT_PV | sed 's/[0-9]*$//')
+  # ROOT_PART_NUM=$(echo $ROOT_PV | grep -o '[0-9]*$')
 
-# echo "Detected root filesystem on $ROOT_MOUNT"
-# echo "Volume Group: $ROOT_VG"
-# echo "Physical Volume: $ROOT_PV"
-# echo "Disk: $ROOT_DISK"
-# echo "Partition: $ROOT_PART_NUM"
+  # echo "Detected root filesystem on $ROOT_MOUNT"
+  # echo "Volume Group: $ROOT_VG"
+  # echo "Physical Volume: $ROOT_PV"
+  # echo "Disk: $ROOT_DISK"
+  # echo "Partition: $ROOT_PART_NUM"
 
-# # Expand the LVM partition 
-# echo "Expanding partition $ROOT_PART_NUM on disk $ROOT_DISK..."
-# growpart $ROOT_DISK $ROOT_PART_NUM || echo "Partition expansion failed, but continuing..."
+  # # Expand the LVM partition 
+  # echo "Expanding partition $ROOT_PART_NUM on disk $ROOT_DISK..."
+  # growpart $ROOT_DISK $ROOT_PART_NUM || echo "Partition expansion failed, but continuing..."
 
-# # Resize the volume to use all space in the expanded partition
-# echo "Resizing volume $ROOT_PV..."
-# pvresize $ROOT_PV || echo "PV resize failed, but continuing with existing space..."
+  # # Resize the volume to use all space in the expanded partition
+  # echo "Resizing volume $ROOT_PV..."
+  # pvresize $ROOT_PV || echo "PV resize failed, but continuing with existing space..."
 
-# # Extend logical volumes with higher percentages to use ~90% of space
-# echo "Extending logical volumes by percentage..."
+  # # Extend logical volumes with higher percentages to use ~90% of space
+  # echo "Extending logical volumes by percentage..."
 
-# # For /usr - Applications (35% of available space)
-# echo "Setting /usr to 35% of available space"
-# lvresize -l +35%FREE /dev/mapper/$ROOT_VG-usrlv || true
-# xfs_growfs /usr
+  # # For /usr - Applications (35% of available space)
+  # echo "Setting /usr to 35% of available space"
+  # lvresize -l +35%FREE /dev/mapper/$ROOT_VG-usrlv || true
+  # xfs_growfs /usr
 
-# # For /home - User files (35% of available space)
-# echo "Setting /home to 35% of available space"
-# lvresize -l +35%FREE /dev/mapper/$ROOT_VG-homelv || true
-# xfs_growfs /home
+  # # For /home - User files (35% of available space)
+  # echo "Setting /home to 35% of available space"
+  # lvresize -l +35%FREE /dev/mapper/$ROOT_VG-homelv || true
+  # xfs_growfs /home
 
-# # For /var - Logs (25% of available space)
-# echo "Setting /var to 25% of available space"
-# lvresize -l +25%FREE /dev/mapper/$ROOT_VG-varlv || true
-# xfs_growfs /var
+  # # For /var - Logs (25% of available space)
+  # echo "Setting /var to 25% of available space"
+  # lvresize -l +25%FREE /dev/mapper/$ROOT_VG-varlv || true
+  # xfs_growfs /var
 
-# # For /tmp - Temporary files (15% of available space)
-# echo "Setting /tmp to 15% of available space"
-# lvresize -l +15%FREE /dev/mapper/$ROOT_VG-tmplv || true
-# xfs_growfs /tmp
+  # # For /tmp - Temporary files (15% of available space)
+  # echo "Setting /tmp to 15% of available space"
+  # lvresize -l +15%FREE /dev/mapper/$ROOT_VG-tmplv || true
+  # xfs_growfs /tmp
 
-# # Log the final results
-# echo "Final disk configuration:"
-# lsblk
-# vgs
-# lvs
-# df -h
-# EOF
-# )
+  # # Log the final results
+  # echo "Final disk configuration:"
+  # lsblk
+  # vgs
+  # lvs
+  # df -h
+  # EOF
+  # )
 
-  computer_name                   = "vm-${var.client}-${var.environment}"
+  computer_name                   = "vm-${var.project}-${var.environment}"
   disable_password_authentication = true
 
   tags = var.default_tags
@@ -159,7 +159,7 @@ resource "azurerm_linux_virtual_machine" "this" {
 
 # Create Public IP for VM
 resource "azurerm_public_ip" "vm_public_ip" {
-  name                = "pip-${var.client}-${var.environment}"
+  name                = "pip-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
   allocation_method   = "Static"
@@ -170,7 +170,7 @@ resource "azurerm_public_ip" "vm_public_ip" {
 
 # Create the Network Interface
 resource "azurerm_network_interface" "vm_nic" {
-  name                = "nic-${var.client}-${var.environment}"
+  name                = "nic-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
 
@@ -186,7 +186,7 @@ resource "azurerm_network_interface" "vm_nic" {
 
 # Collects vm logs and sends them to the log workspace
 resource "azurerm_monitor_data_collection_rule" "syslog" {
-  name                = "dcr_${var.client}_${var.environment}"
+  name                = "dcr_${var.project}_${var.environment}"
   resource_group_name = var.resource_group_name
   location            = var.log_location
   destinations {
@@ -197,7 +197,7 @@ resource "azurerm_monitor_data_collection_rule" "syslog" {
   }
   data_sources {
     syslog {
-      name           = "syslog_datasource_${var.client}"
+      name           = "syslog_datasource_${var.project}"
       facility_names = ["*"]
       log_levels     = ["*"]
       streams        = ["Microsoft-Syslog"]
@@ -211,7 +211,7 @@ resource "azurerm_monitor_data_collection_rule" "syslog" {
 }
 # Association and agent installation
 resource "azurerm_monitor_data_collection_rule_association" "vm_syslog_association" {
-  name                    = "dcr_syslog_${var.client}_${var.environment}"
+  name                    = "dcr_syslog_${var.project}_${var.environment}"
   target_resource_id      = azurerm_linux_virtual_machine.this.id
   data_collection_rule_id = azurerm_monitor_data_collection_rule.syslog.id
   description             = "Association between Linux VM and syslog data collection rule"
@@ -223,5 +223,5 @@ resource "azurerm_virtual_machine_extension" "azure_monitor_agent" {
   type                       = "AzureMonitorLinuxAgent"
   type_handler_version       = "1.34"
   auto_upgrade_minor_version = true
-  tags = var.default_tags
+  tags                       = var.default_tags
 }

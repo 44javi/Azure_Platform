@@ -13,8 +13,8 @@ variable "region" {
   type        = string
 }
 
-variable "client" {
-  description = "Client name for resource naming"
+variable "project" {
+  description = "project name for resource naming"
   type        = string
 }
 
@@ -65,7 +65,7 @@ variable "key_vault_id" {
 
 variable "log_analytics_id" {
   description = "id of the main log workspace"
-  type = string
+  type        = string
 }
 
 variable "log_location" {

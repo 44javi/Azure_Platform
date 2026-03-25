@@ -1,7 +1,7 @@
 # data_resources module
 
 # Get Azure subscription details
-data "azurerm_client_config" "current" {}
+data "azurerm_project_config" "current" {}
 
 data "azuread_group" "adls_groups" {
   for_each     = var.adls_rbac
@@ -56,7 +56,7 @@ resource "azurerm_storage_container" "this" {
 
 # Private Endpoint for ADLS (Azure Data Lake Storage)
 resource "azurerm_private_endpoint" "adls" {
-  name                = "pe-adls-${var.client}-${var.environment}"
+  name                = "pe-adls-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
   subnet_id           = var.subnet_id
@@ -72,7 +72,7 @@ resource "azurerm_private_endpoint" "adls" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "adls" {
-  name                       = "logs-adls-${var.client}-${var.environment}"
+  name                       = "logs-adls-${var.project}-${var.environment}"
   target_resource_id         = "${azurerm_storage_account.adls.id}/blobServices/default"
   log_analytics_workspace_id = var.log_analytics_id
 

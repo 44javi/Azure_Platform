@@ -1,7 +1,7 @@
 # /modules/security/variables.tf
 
-variable "client" {
-  description = "Client name"
+variable "project" {
+  description = "project name"
   type        = string
 }
 

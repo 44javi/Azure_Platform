@@ -4,7 +4,7 @@
 data "azurerm_subscription" "current" {}
 
 resource "azurerm_automation_account" "this" {
-  name                = "aa-${var.client}-${var.environment}"
+  name                = "aa-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
   sku_name            = "Basic"

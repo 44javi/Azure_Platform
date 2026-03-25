@@ -1,12 +1,12 @@
 # Network module 
 
 # Grabs Tenant Info
-data "azurerm_client_config" "current" {}
+data "azurerm_project_config" "current" {}
 
 
 # Create the Virtual Network
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-${var.client}-${var.environment}"
+  name                = "vnet-${var.project}-${var.environment}"
   address_space       = var.vnet_address_space
   location            = var.region
   resource_group_name = var.resource_group_name
@@ -16,7 +16,7 @@ resource "azurerm_virtual_network" "vnet" {
 
 # Creates the private subnet for VMs
 resource "azurerm_subnet" "private" {
-  name                            = "snet-private-${var.client}-${var.environment}"
+  name                            = "snet-private-${var.project}-${var.environment}"
   resource_group_name             = var.resource_group_name
   virtual_network_name            = azurerm_virtual_network.vnet.name
   address_prefixes                = [var.subnet_address_prefixes["private_subnet"]]
@@ -25,7 +25,7 @@ resource "azurerm_subnet" "private" {
 
 # Creates the public subnet
 resource "azurerm_subnet" "public" {
-  name                            = "snet-public-${var.client}-${var.environment}"
+  name                            = "snet-public-${var.project}-${var.environment}"
   resource_group_name             = var.resource_group_name
   virtual_network_name            = azurerm_virtual_network.vnet.name
   address_prefixes                = [var.subnet_address_prefixes["public_subnet"]]
@@ -34,7 +34,7 @@ resource "azurerm_subnet" "public" {
 
 # NSG for public subnet
 resource "azurerm_network_security_group" "public" {
-  name                = "nsg-public-${var.client}-${var.environment}"
+  name                = "nsg-public-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
 
@@ -99,7 +99,7 @@ resource "azurerm_subnet_network_security_group_association" "public" {
 
 # Creates the NAT Gateway
 resource "azurerm_nat_gateway" "this" {
-  name                = "ng-${var.client}-${var.environment}"
+  name                = "ng-${var.project}-${var.environment}"
   resource_group_name = var.resource_group_name
   location            = var.region
 
@@ -108,7 +108,7 @@ resource "azurerm_nat_gateway" "this" {
 
 # Creates the Public IP for NAT Gateway
 resource "azurerm_public_ip" "nat_gateway" {
-  name                = "ng-ip-${var.client}-${var.environment}"
+  name                = "ng-ip-${var.project}-${var.environment}"
   resource_group_name = var.resource_group_name
   location            = var.region
   allocation_method   = "Static"
@@ -125,13 +125,13 @@ resource "azurerm_nat_gateway_public_ip_association" "this" {
 
 # Associate NAT Gateway with the public subnet
 resource "azurerm_subnet_nat_gateway_association" "public" {
-subnet_id  	= azurerm_subnet.public.id
-nat_gateway_id = azurerm_nat_gateway.this.id
+  subnet_id      = azurerm_subnet.public.id
+  nat_gateway_id = azurerm_nat_gateway.this.id
 
-depends_on = [
-   azurerm_nat_gateway.this,
-   azurerm_subnet.public
-]
+  depends_on = [
+    azurerm_nat_gateway.this,
+    azurerm_subnet.public
+  ]
 }
 
 # Associate NAT Gateway with the private Subnet
@@ -140,14 +140,14 @@ resource "azurerm_subnet_nat_gateway_association" "nat_gateway_subnet_assoc" {
   nat_gateway_id = azurerm_nat_gateway.this.id
 
   depends_on = [
-   azurerm_nat_gateway.this,
-   azurerm_subnet.private
-]
+    azurerm_nat_gateway.this,
+    azurerm_subnet.private
+  ]
 }
 
 # Creates the the subnet for Azure Bastion
 resource "azurerm_subnet" "bastion" {
-  name                 = "snet-bastion${var.client}-${var.environment}" 
+  name                 = "snet-bastion${var.project}-${var.environment}"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = [var.subnet_address_prefixes["bastion_subnet"]]
@@ -155,7 +155,7 @@ resource "azurerm_subnet" "bastion" {
 
 # Network Security group for private subnet
 resource "azurerm_network_security_group" "private" {
-  name                = "nsg-private-${var.client}-${var.environment}"
+  name                = "nsg-private-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
 

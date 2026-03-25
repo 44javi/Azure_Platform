@@ -1,5 +1,5 @@
-variable "client" {
-  description = "Client name for Key Vault naming"
+variable "project" {
+  description = "project name for Key Vault naming"
   type        = string
 }
 

@@ -24,8 +24,8 @@ resource "azurerm_databricks_workspace" "this" {
   name                        = "dbx-${var.region}-${var.environment}"
   resource_group_name         = var.resource_group_name
   location                    = var.region
-  sku                         = "premium"                                 # Chose premium for job clusters and private endpoint, Role-Based Access Control (RBAC), Audit Logs, and Cluster Policies.
-  managed_resource_group_name = "rg-${var.client}-clusters-${var.environment}" # Databricks creates a mandatory managed RG
+  sku                         = "premium"                                       # Chose premium for job clusters and private endpoint, Role-Based Access Control (RBAC), Audit Logs, and Cluster Policies.
+  managed_resource_group_name = "rg-${var.project}-clusters-${var.environment}" # Databricks creates a mandatory managed RG
 
   tags = var.default_tags
 
@@ -43,7 +43,7 @@ resource "azurerm_databricks_workspace" "this" {
 
 # Public Subnet for Databricks
 resource "azurerm_subnet" "databricks_public_subnet" {
-  name                 = "dbx-public-subnet-${var.client}-${var.environment}"
+  name                 = "dbx-public-subnet-${var.project}-${var.environment}"
   resource_group_name  = var.resource_group_name
   virtual_network_name = var.vnet_name
   address_prefixes     = [var.subnet_address_prefixes["databricks_public_subnet"]]
@@ -67,7 +67,7 @@ resource "azurerm_subnet" "databricks_public_subnet" {
 
 # Private or Container Subnet for Databricks 
 resource "azurerm_subnet" "databricks_private_subnet" {
-  name                 = "dbx-private-subnet-${var.client}-${var.environment}"
+  name                 = "dbx-private-subnet-${var.project}-${var.environment}"
   resource_group_name  = var.resource_group_name
   virtual_network_name = var.vnet_name
   address_prefixes     = [var.subnet_address_prefixes["databricks_private_subnet"]]
@@ -93,7 +93,7 @@ resource "azurerm_subnet" "databricks_private_subnet" {
 
 # NSG for Public Subnet nsg
 resource "azurerm_network_security_group" "databricks_public_nsg" {
-  name                = "dbx-public-nsg-${var.client}-${var.environment}"
+  name                = "dbx-public-nsg-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
 
@@ -102,7 +102,7 @@ resource "azurerm_network_security_group" "databricks_public_nsg" {
 
 # NSG for Private Subnet
 resource "azurerm_network_security_group" "databricks_private_nsg" {
-  name                = "dbx-private-nsg-${var.client}-${var.environment}"
+  name                = "dbx-private-nsg-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
 
@@ -136,7 +136,7 @@ resource "azurerm_subnet_nat_gateway_association" "databricks_private" {
 
 # Enable logs for Databricks workspace
 resource "azurerm_monitor_diagnostic_setting" "dbx" {
-  name                       = "${var.client}_dbx_logs_${var.environment}"
+  name                       = "${var.project}_dbx_logs_${var.environment}"
   target_resource_id         = azurerm_databricks_workspace.this.id
   log_analytics_workspace_id = var.log_analytics_id
 
