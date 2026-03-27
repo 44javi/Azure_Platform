@@ -1,4 +1,4 @@
-data "azurerm_project_config" "current" {}
+data "azurerm_client_config" "current" {}
 
 resource "azurerm_monitor_action_group" "alerts" {
   name                = "alerts-${var.project}-${var.environment}"
@@ -29,5 +29,5 @@ resource "azurerm_log_analytics_workspace" "this" {
 resource "azurerm_role_assignment" "admin" {
   scope                = azurerm_log_analytics_workspace.this.id
   role_definition_name = "Log Analytics Reader"
-  principal_id         = data.azurerm_project_config.current.object_id
+  principal_id         = data.azurerm_client_config.current.object_id
 }

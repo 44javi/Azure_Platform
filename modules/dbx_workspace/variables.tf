@@ -74,3 +74,21 @@ variable "dbx_rbac" {
     role_definition_name = string
   }))
 }
+
+variable "sku" {
+  description = "SKU for the Databricks workspace. Premium enables job clusters, private endpoints, RBAC, audit logs, and cluster policies."
+  type        = string
+  default     = "premium"
+}
+
+variable "no_public_ip" {
+  description = "Whether to disable public IP addresses on Databricks cluster nodes (secure cluster connectivity)"
+  type        = bool
+  default     = true
+}
+
+variable "default_outbound_access_enabled" {
+  description = "Whether to enable default outbound access for Databricks subnets"
+  type        = bool
+  default     = false
+}

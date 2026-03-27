@@ -74,3 +74,69 @@ variable "st_retention_days" {
   type        = number
   default     = 30
 }
+
+variable "min_tls_version" {
+  description = "Minimum TLS version for the storage account"
+  type        = string
+  default     = "TLS1_2"
+}
+
+variable "https_traffic_only_enabled" {
+  description = "Require HTTPS traffic only"
+  type        = bool
+  default     = true
+}
+
+variable "account_tier" {
+  description = "Storage account tier"
+  type        = string
+  default     = "Standard"
+}
+
+variable "account_replication_type" {
+  description = "Storage account replication type"
+  type        = string
+  default     = "LRS"
+}
+
+variable "account_kind" {
+  description = "Storage account kind"
+  type        = string
+  default     = "StorageV2"
+}
+
+variable "is_hns_enabled" {
+  description = "Enable hierarchical namespace (ADLS Gen2)"
+  type        = bool
+  default     = true
+}
+
+variable "allow_nested_items_to_be_public" {
+  description = "Allow nested items (blobs) to be public"
+  type        = bool
+  default     = false
+}
+
+variable "public_network_access_enabled" {
+  description = "Allow public network access to the storage account"
+  type        = bool
+  default     = true
+}
+
+variable "container_access_type" {
+  description = "Access type for storage containers"
+  type        = string
+  default     = "private"
+}
+
+variable "pe_subresource_names" {
+  description = "Subresource names for the private endpoint connection"
+  type        = list(string)
+  default     = ["dfs"]
+}
+
+variable "is_manual_connection" {
+  description = "Whether the private endpoint connection is manual"
+  type        = bool
+  default     = false
+}

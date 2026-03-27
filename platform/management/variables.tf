@@ -1,3 +1,14 @@
+# for tags
+locals {
+  default_tags = {
+    owner       = var.owner
+    environment = var.environment
+    project     = var.project
+    region      = var.region
+    created_by  = "Terraform"
+  }
+}
+
 variable "root_management_group_id" {
   description = "The ID of the Root Management Group"
   type        = string

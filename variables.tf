@@ -21,14 +21,31 @@ variable "vnet_address_space" {
 }
 
 
-variable "subnet_address_prefixes" {
-  description = "A map of address prefixes for each subnet"
-  type        = map(string)
+variable "subnets" {
+  description = "Subnet configurations for the network module. See modules/network/variables.tf for the full schema."
+  type = map(object({
+    address_prefix           = string
+    name_override            = optional(string)
+    disable_default_outbound = optional(bool, true)
+    attach_nat_gateway       = optional(bool, false)
+    nsg_rules = optional(list(object({
+      name                       = string
+      priority                   = number
+      direction                  = string
+      access                     = string
+      protocol                   = string
+      source_port_range          = optional(string, "*")
+      destination_port_range     = string
+      source_address_prefix      = optional(string)
+      source_address_prefixes    = optional(list(string))
+      destination_address_prefix = optional(string, "*")
+    })), [])
+  }))
 }
 
-variable "trusted_ip_ranges" {
-  description = "List of trusted IP ranges for access to public VMs"
-  type        = list(string)
+variable "subnet_address_prefixes" {
+  description = "Address prefixes for Databricks-managed subnets (used by the dbx_workspace module)"
+  type        = map(string)
 }
 
 variable "vm_private_ip" {

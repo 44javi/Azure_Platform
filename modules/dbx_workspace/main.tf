@@ -4,12 +4,10 @@ terraform {
   required_providers {
     databricks = {
       source                = "databricks/databricks"
-      version               = "~> 1.87.0"
       configuration_aliases = [databricks.create_workspace]
     }
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.37.0"
     }
   }
 }
@@ -21,10 +19,10 @@ data "azuread_group" "dbx_groups" {
 
 # Azure Databricks Workspace with VNet injection
 resource "azurerm_databricks_workspace" "this" {
-  name                        = "dbx-${var.region}-${var.environment}"
+  name                        = "dbx-${var.project}-${var.environment}"
   resource_group_name         = var.resource_group_name
   location                    = var.region
-  sku                         = "premium"                                       # Chose premium for job clusters and private endpoint, Role-Based Access Control (RBAC), Audit Logs, and Cluster Policies.
+  sku                         = var.sku
   managed_resource_group_name = "rg-${var.project}-clusters-${var.environment}" # Databricks creates a mandatory managed RG
 
   tags = var.default_tags
@@ -32,7 +30,7 @@ resource "azurerm_databricks_workspace" "this" {
   #public_network_access_enabled = false  
 
   custom_parameters {
-    no_public_ip                                         = true
+    no_public_ip                                         = var.no_public_ip
     virtual_network_id                                   = var.vnet_id
     public_subnet_name                                   = azurerm_subnet.databricks_public_subnet.name
     private_subnet_name                                  = azurerm_subnet.databricks_private_subnet.name
@@ -49,7 +47,7 @@ resource "azurerm_subnet" "databricks_public_subnet" {
   address_prefixes     = [var.subnet_address_prefixes["databricks_public_subnet"]]
 
   # Disable default outbound access
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = var.default_outbound_access_enabled
 
   delegation {
     name = "databricks_delegation"
@@ -73,7 +71,7 @@ resource "azurerm_subnet" "databricks_private_subnet" {
   address_prefixes     = [var.subnet_address_prefixes["databricks_private_subnet"]]
 
   # Disable default outbound access
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = var.default_outbound_access_enabled
 
   delegation {
     name = "databricks_delegation"
