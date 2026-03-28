@@ -128,3 +128,15 @@ variable "dbx_logs" {
   type        = list(string)
   default     = []
 }
+
+variable "sqlw_max_clusters" {
+  description = "Maximum number of clusters for the SQL warehouse"
+  type        = number
+  default     = 1
+}
+
+variable "sqlw_min_clusters" {
+  description = "Minimum number of clusters for the SQL warehouse"
+  type        = number
+  default     = 1
+}

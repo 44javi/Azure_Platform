@@ -4,12 +4,10 @@ terraform {
   required_providers {
     databricks = {
       source                = "databricks/databricks"
-      version               = "~> 1.87.0"
       configuration_aliases = [databricks.workspace_resources]
     }
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.37.0"
     }
   }
 }
@@ -51,7 +49,8 @@ resource "azurerm_role_assignment" "unity_eventsubscription" {
 }
 
 resource "databricks_storage_credential" "unity" {
-  name = "dbx_${var.project}_unity_credential"
+  provider = databricks.workspace_resources
+  name     = "dbx_${var.project}_unity_credential"
   azure_managed_identity {
     access_connector_id = azurerm_databricks_access_connector.unity.id
   }
@@ -89,17 +88,21 @@ resource "databricks_schema" "schemas" {
   comment      = "Schema for ${each.key} data"
 }
 
-resource "databricks_system_schema" "this" {
-  for_each = toset(var.system_schemas)
-  schema   = each.value
-}
+# resource "databricks_system_schema" "this" {
+#   provider = databricks.workspace_resources
+#   for_each = toset(var.system_schemas)
+#   schema   = each.value
+# }
 
 # SQL Warehouse
 
-data "databricks_current_user" "me" {}
+data "databricks_current_user" "me" {
+  provider = databricks.workspace_resources
+}
 
 resource "databricks_sql_endpoint" "sql_warehouse" {
-  name = "sql_w_${var.project}_${var.environment}"
+  provider = databricks.workspace_resources
+  name = "sqlw_${var.project}_${var.environment}"
 
   cluster_size     = var.sqlw_cluster_size
   min_num_clusters = var.sqlw_min_clusters

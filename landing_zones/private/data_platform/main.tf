@@ -67,3 +67,26 @@ module "dbx_workspace" {
     module.network
   ]
 }
+
+module "dbx_resources" {
+  source = "../../../modules/dbx_resources"
+  providers = {
+    databricks.workspace_resources = databricks.workspace_resources
+  }
+
+  project             = var.project
+  environment         = var.environment
+  resource_group_name = azurerm_resource_group.main.name
+  resource_group_id   = azurerm_resource_group.main.id
+  region              = var.region
+  datalake_name       = module.storage.datalake_name
+  datalake_id         = module.storage.datalake_id
+  containers          = var.containers
+  schemas             = var.schemas
+  workspace_id        = module.dbx_workspace.workspace_id
+
+  depends_on = [
+    module.storage,
+    module.dbx_workspace
+  ]
+}
