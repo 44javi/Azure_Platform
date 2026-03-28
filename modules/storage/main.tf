@@ -13,6 +13,8 @@ resource "random_string" "this" {
   length  = 2
   special = false
   upper   = false
+  lower   = false
+  numeric = true
 }
 
 # Data Lake Storage

@@ -77,7 +77,7 @@ variable "alert_email" {
 }
 
 variable "management_subscription_id" {
-  description = "Subscription ID where the "
+  description = "Subscription ID where"
   type        = string
 }
 

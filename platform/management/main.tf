@@ -4,7 +4,7 @@ resource "azurerm_resource_group" "main" {
   location = var.region
 }
 
-module "monitoring" {
+module "log_workspace" {
   source              = "../../modules/monitoring"
   resource_group_name = azurerm_resource_group.main.name
   resource_group_id   = azurerm_resource_group.main.id
@@ -12,5 +12,15 @@ module "monitoring" {
   project             = var.project
   environment         = var.environment
   alert_email         = var.alert_email
+  default_tags        = local.default_tags
+}
+
+module "keyvault" {
+  source              = "../../modules/security"
+  project             = var.project
+  environment         = var.environment
+  region              = var.region
+  resource_group_name = azurerm_resource_group.main.name
+  resource_group_id   = azurerm_resource_group.main.id
   default_tags        = local.default_tags
 }

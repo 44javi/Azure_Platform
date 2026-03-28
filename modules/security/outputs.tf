@@ -6,7 +6,7 @@ output "key_vault_id" {
 }
 
 output "tenant_id" {
-  value = data.azurerm_project_config.current.tenant_id
+  value = data.azurerm_client_config.current.tenant_id
 }
 
 

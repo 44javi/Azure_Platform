@@ -23,6 +23,8 @@ resource "random_string" "this" {
   length  = 1
   special = false
   upper   = false
+  lower   = false
+  numeric = true
 }
 
 
