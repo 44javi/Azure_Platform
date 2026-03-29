@@ -3,7 +3,7 @@ data "azurerm_client_config" "current" {}
 resource "azurerm_monitor_action_group" "alerts" {
   name                = "alerts-${var.project}-${var.environment}"
   resource_group_name = var.resource_group_name
-  short_name          = "alerts"
+  short_name          = var.action_group_short_name
 
   email_receiver {
     name          = "alerts"
@@ -15,12 +15,12 @@ resource "azurerm_log_analytics_workspace" "this" {
   name                = "log${var.project}${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
-  sku                 = "PerGB2018" # SKUs: Free, PerGB2018, Standalone, CapacityReservation
-  retention_in_days   = 30          # Retention period for logs (30-730 days)
+  sku                 = var.log_analytics_sku
+  retention_in_days   = var.log_retention_days
 
-  daily_quota_gb             = 1 # -1 for unlimited
-  internet_ingestion_enabled = true
-  internet_query_enabled     = true
+  daily_quota_gb             = var.log_daily_quota_gb
+  internet_ingestion_enabled = var.internet_ingestion_enabled
+  internet_query_enabled     = var.internet_query_enabled
 
   tags = var.default_tags
 }
