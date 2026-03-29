@@ -29,7 +29,7 @@ A repository for automating **Azure** and **Databricks** deployments with **Terr
    - `./.debug.prod.sh plan`
    - `./.debug.prod.sh apply` to deploy the infrastructure
 2. Databricks CLI (optional)
-   - The Databricks CLI is not required to deploy resources via Terraform, but is useful for interacting directly with the workspace — uploading notebooks, running jobs, managing secrets, or debugging
+   - The Databricks CLI is not required to deploy resources via Terraform, but is useful for interacting directly with the workspace uploading notebooks, running jobs, managing secrets, or debugging
    - Generate a personal access token from the workspace (User Settings → Developer → New Token)
    - Configure the Databricks CLI:
      ```bash
