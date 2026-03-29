@@ -27,18 +27,16 @@ A repository for automating **Azure** and **Databricks** deployments with **Terr
 1. Initial Deployment
    - `chmod +x ./.debug.prod.sh`
    - `./.debug.prod.sh plan`
-   - `./.debug.prod.sh apply` to deploy the initial infrastructure
-2. Databricks Configuration
-   - After the Databricks workspace is created, navigate to the workspace in the Azure portal
-   - Generate a personal access token (User Settings → Developer → New Token)
+   - `./.debug.prod.sh apply` to deploy the infrastructure
+2. Databricks CLI (optional)
+   - The Databricks CLI is not required to deploy resources via Terraform, but is useful for interacting directly with the workspace — uploading notebooks, running jobs, managing secrets, or debugging
+   - Generate a personal access token from the workspace (User Settings → Developer → New Token)
    - Configure the Databricks CLI:
      ```bash
      databricks configure --token
      ```
    - Enter the workspace URL and access token when prompted
-   - This creates a `~/.databrickscfg` file that enables authentication and resource creation
-3. Final Deployment
-   - Run `./.debug.prod.sh apply` again to complete the deployment of resources
+   - This creates a `~/.databrickscfg` file that enables authentication
 
 ---
 
@@ -59,91 +57,39 @@ A repository for automating **Azure** and **Databricks** deployments with **Terr
 ## Project Structure
 
 ```
-/azure-terraform
-├── /env                          # Environment configurations
-│   └── prod.tfvars
-│               
-├── /modules
-│   ├── /compute                  # Module for compute related resources
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── /storage                  # Module for storage related resources
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── /dbx_workspace            # Module for Databricks workspace with VNET injection
-│   │   ├── main.tf               # Workspace, subnets, NSGs, and NAT gateway
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── /security                 # Module for security related resources
-│   │   ├── main.tf               # Service principals, Key vault, security groups, etc
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── /inactive_resources       # Module for resources currently not in use
-│   │   ├── main.tf
-│   ├── /monitoring               # Module for monitoring and logging resources
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── /network                  # Module for networking components
-│   │   ├── main.tf               # VNets, public/private subnets, NSGs, etc
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   └── /unity_catalog            # Module for databricks workspace resources
-│       ├── main.tf               # Catalogs, schemas, and external locations
-│       ├── variables.tf
-│       └── outputs.tf
+azure_platform/
+├── platform/
+│   ├── management/               # Management subscription resources (Log Analytics, etc.)
+│   └── connectivity/             # Connectivity subscription resources
 │
-├── /regions
-│   ├── /us
-│   │   ├── /management
-│   │   │   ├── /env
-│   │   │   │   └── prod.tfvars
-│   │   │   ├── .debug.prod.sh
-│   │   │   ├── main.tf
-│   │   │   ├── variables.tf
-│   │   │   └── outputs.tf
-│   │   └── /clients
-│   │       ├── /client-a
-│   │       │   ├── /env
-│   │       │   │   └── prod.tfvars
-│   │       │   ├── .debug.prod.sh
-│   │       │   ├── main.tf
-│   │       │   ├── variables.tf
-│   │       │   └── outputs.tf
-│   │       └── /client-b
-│   │           ├── /env
-│   │           │   └── prod.tfvars
-│   │           ├── .debug.prod.sh
-│   │           ├── main.tf
-│   │           ├── variables.tf
-│   │           └── outputs.tf
-│   │
-│   └── /japan
-│       ├── /management
-│       │   ├── /env
-│       │   │   └── prod.tfvars
-│       │   ├── .debug.prod.sh
-│       │   ├── main.tf
-│       │   ├── variables.tf
-│       │   └── outputs.tf
-│       └── /clients
-│           └── /client-c
-│               ├── /env
-│               │   └── prod.tfvars
-│               ├── .debug.prod.sh
-│               ├── main.tf
-│               ├── variables.tf
-│               └── outputs.tf
-├── .debug.prod.sh                # Sets the backend and some environment variables
-├── iam.tf                        # Creates security groups
-├── main.tf                       # Core configuration to orchestrate modules
-├── versions.tf                   # Azure and Databricks providers
-├── variables.tf                  # Variables for the project
-├── management_groups.tf          # Sets management group hierarchy
-├── outputs.tf                    # Root module outputs
-└── README.md                     # Project documentation
+├── landing_zones/
+│   ├── private/
+│   │   └── data_platform/        # This landing zone
+│   │       ├── env/
+│   │       │   ├── dev.tfvars
+│   │       │   └── prod.tfvars
+│   │       ├── assets/           # Diagram assets
+│   │       ├── notebooks/        # Databricks notebooks
+│   │       ├── query_app/        # Go application for querying the data platform
+│   │       ├── .debug.prod.sh    # Init, backend config, and Terraform runner script
+│   │       ├── main.tf           # Orchestrates all modules for this landing zone
+│   │       ├── variables.tf
+│   │       ├── outputs.tf
+│   │       └── versions.tf       # Provider and backend configuration
+│   └── public/
+│       ├── cloud_resume/
+│       └── portfolio/
+│
+├── modules/                      # Shared reusable Terraform modules
+│   ├── network/                  # VNet, subnets, NSGs, NAT gateway
+│   ├── storage/                  # ADLS Gen2 data lake
+│   ├── dbx_workspace/            # Databricks workspace with VNet injection
+│   ├── dbx_resources/            # Workspace-level resources (clusters, catalogs, schemas)
+│   ├── security/                 # Key Vault, service principals, security groups
+│   ├── monitoring/               # Log Analytics, diagnostic settings
+│   ├── compute/                  # Compute resources
+│   ├── automation/               # Automation scripts and runbooks
+│   ├── service_principal/        # Service principal management
+│
 └── template.tf                   # Templates for tfvars and debug.sh files
-
 ```
