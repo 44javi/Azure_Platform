@@ -32,4 +32,5 @@ variable "secrets" {
     min_numeric = optional(number, 3)
     min_special = optional(number, 2)
   }))
+  default = {}
 }
