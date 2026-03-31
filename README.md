@@ -35,9 +35,7 @@ A repository for automating a **Azure** tenant with **Terraform**.
 
 ```
 /azure_platform
-├── /env                               # Root environment configurations
-│   └── prod.tfvars
-│
+|
 ├── /landing_zones                     # Deployable workloads and applications
 │   ├── /private                       # Internal / non-public workloads
 │   │   └── /data_platform             # Data platform landing zone (Databricks + dbt)
