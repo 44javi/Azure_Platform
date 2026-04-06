@@ -1,0 +1,238 @@
+# portfolio-web.yml
+trigger:
+  branches:
+    include:
+      - dev
+      - test
+      - main
+  paths:
+    include:
+      - "frontend/**"
+      - "Dockerfile"
+    exclude:
+      - "README.md"
+
+pool:
+  vmImage: "ubuntu-latest"
+
+# Shared variables used across all environments
+variables:
+  - group: shared-variables
+  - group: portfolio-variables-dev
+  - group: portfolio-variables-test
+  - group: portfolio-variables-prod
+  - name: tag
+    value: "$(Build.BuildId)"
+
+stages:
+  # Build Stage -  For all branches
+  - stage: Build
+    displayName: Build and Push
+    jobs:
+      - job: BuildAndPush
+        displayName: Build and Push
+        steps:
+          - task: Docker@2
+            displayName: Build and Push Docker Image
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepository)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+                latest
+
+      - job: SnykScan
+        displayName: Run Snyk Security Scans
+        dependsOn: BuildAndPush
+        steps:
+          - script: |
+              echo "Installing Snyk CLI..."
+              curl -Lo snyk https://static.snyk.io/cli/latest/snyk-linux
+              chmod +x snyk
+              sudo mv snyk /usr/local/bin/
+              echo "Authenticating with Snyk..."
+              snyk auth $(SNYK_TOKEN)
+              echo "Scanning Open Source Packages ..."
+              snyk monitor --org=$(snyk_org) 
+              echo "Scanning Container Image..."
+              snyk container monitor $(imageRepository):$(tag) --org=$(snyk_org) 
+              echo "Scanning Infrastructure..."
+              snyk iac test --report --org=$(snyk_org) 
+
+          # Create an artifact containing deployment info
+          - task: Bash@3
+            displayName: "Generate Deployment Manifest"
+            inputs:
+              targetType: "inline"
+              script: |
+                mkdir -p $(Build.ArtifactStagingDirectory)/deployment
+                echo "Image: $(imageRepository):$(tag)" > $(Build.ArtifactStagingDirectory)/deployment/image-info.txt
+                echo "Build: $(Build.BuildNumber)" >> $(Build.ArtifactStagingDirectory)/deployment/image-info.txt
+                echo "Commit: $(Build.SourceVersion)" >> $(Build.ArtifactStagingDirectory)/deployment/image-info.txt
+                echo "Date: $(Build.BuildId)" >> $(Build.ArtifactStagingDirectory)/deployment/image-info.txt
+                echo "Branch: $(Build.SourceBranchName)" >> $(Build.ArtifactStagingDirectory)/deployment/image-info.txt
+
+          # Copy frontend files to artifacts
+          - task: CopyFiles@2
+            displayName: "Copy Frontend Files to Artifacts"
+            inputs:
+              SourceFolder: "$(Build.SourcesDirectory)/frontend"
+              Contents: "**"
+              TargetFolder: "$(Build.ArtifactStagingDirectory)/frontend"
+
+          # Publish the artifacts
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Artifacts"
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "drop"
+              publishLocation: "Container"
+
+  # Development Deployment Stage
+  - stage: DeployDev
+    displayName: Deploy to Development
+    dependsOn: Build
+    condition: succeeded()
+    variables:
+      - group: portfolio-variables-dev
+    jobs:
+      - job: Deploy
+        displayName: Deploy Container App (Dev)
+        steps:
+          # Download the artifacts from the build stage
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "drop"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - task: AzureCLI@2
+            displayName: Update Container App (Dev)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                # Log deployment info
+                cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
+
+                # Deploy to Container App
+                az containerapp update \
+                  --name $(containerAppName) \
+                  --resource-group $(resourceGroupName) \
+                  --image $(imageRepository):$(tag)
+
+                # Record successful deployment
+                echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (DEV) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Deployment Results"
+            inputs:
+              PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
+              ArtifactName: "deployment-results-dev"
+              publishLocation: "Container"
+
+  # Test Deployment Stage
+  - stage: DeployTest
+    displayName: Deploy to Test
+    dependsOn: DeployDev
+    condition: or(
+      and(succeeded('DeployDev'), eq(variables['Build.SourceBranch'], 'refs/heads/dev')),
+      eq(variables['Build.SourceBranch'], 'refs/heads/test'),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+      )
+    variables:
+      - group: portfolio-variables-test
+    jobs:
+      - job: Deploy
+        displayName: Deploy Container App (Test)
+        #environment: test  # This creates an approval gate
+        steps:
+          # Download the artifacts from the build stage
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "drop"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - task: AzureCLI@2
+            displayName: Update Container App (Test)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                # Log deployment info
+                cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
+
+                # Deploy to Container App
+                az containerapp update \
+                  --name $(containerAppName) \
+                  --resource-group $(resourceGroupName) \
+                  --image $(imageRepository):$(tag)
+
+                # Record successful deployment
+                echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (TEST) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Deployment Results"
+            inputs:
+              PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
+              ArtifactName: "deployment-results-test"
+              publishLocation: "Container"
+
+  # Production Deployment Stage
+  - stage: DeployProd
+    displayName: Deploy to Production
+    dependsOn: DeployTest
+    condition: or(
+      and(succeeded('DeployTest'), or(
+      eq(variables['Build.SourceBranch'], 'refs/heads/dev'),
+      eq(variables['Build.SourceBranch'], 'refs/heads/test')
+      )),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+      )
+    variables:
+      - group: portfolio-variables-prod
+    jobs:
+      - job: Deploy
+        displayName: Deploy Container App (Prod)
+        #environment: production  # This creates an approval gate
+        steps:
+          # Download the artifacts from the build stage
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "drop"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - task: AzureCLI@2
+            displayName: Update Container App (Prod)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                # Log deployment info
+                cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
+
+                # Deploy to Container App
+                az containerapp update \
+                  --name $(containerAppName) \
+                  --resource-group $(resourceGroupName) \
+                  --image $(imageRepository):$(tag)
+
+                # Record successful deployment
+                echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (PROD) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Deployment Results"
+            inputs:
+              PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
+              ArtifactName: "deployment-results-prod"
+              publishLocation: "Container"

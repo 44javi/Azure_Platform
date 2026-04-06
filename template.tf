@@ -142,10 +142,10 @@
 # # =============================================================================
 # # MONITORING & LOGGING CONFIGURATION
 # # =============================================================================
-# alert_email = "pachecojavier44@gmail.com"
-# management_subscription_id  = "1e47212e-ee75-4da1-aaf5-ed252046cdea"
-# log_analytics_workspace_name = "logmanagementprod"                                                                                                                 
-# log_analytics_resource_group = "rg-management-prod"  
+# alert_email = ""
+# management_subscription_id  = ""
+# log_analytics_workspace_name = ""                                                                                                                 
+# log_analytics_resource_group = ""  
 
 # # List of Azure Data Lake logs to enable
 # adls_logs =[
