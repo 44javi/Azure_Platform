@@ -140,3 +140,55 @@ variable "sqlw_min_clusters" {
   type        = number
   default     = 1
 }
+
+variable "account_id" {
+  description = "Databricks account id"
+  type        = string
+}
+
+variable "dbx_workspace_ids" {
+  description = "Numeric Databricks workspace IDs to attach the network policy to."
+  type        = list(number)
+  default     = []
+}
+
+variable "network_policy_egress_destinations" {
+  description = "List of allowed FQDN egress destinations for the Databricks account network policy"
+  type        = list(string)
+  default     = []
+}
+
+variable "network_policy_storage_destinations" {
+  description = "List of allowed Azure Storage destinations for the Databricks account network policy"
+  type = list(object({
+    storage_account = string
+    storage_service = string
+  }))
+  default = []
+}
+
+# Ingress fields are pending provider support (not yet in v1.112.0 schema).
+# Variables are defined now so tfvars is ready
+variable "network_policy_ingress_allow_rules" {
+  description = "Ingress allow rules: restrict workspace access by IP range, identity, and destination. Pending databricks provider support."
+  type = list(object({
+    label             = optional(string)
+    ip_ranges         = optional(list(string)) # CIDR notation, e.g. ["10.0.0.0/8", "203.0.113.0/24"]
+    all_ip_ranges     = optional(bool, false)
+    identity_type     = optional(string)       # IDENTITY_TYPE_ALL_USERS | IDENTITY_TYPE_ALL_SERVICE_PRINCIPALS | IDENTITY_TYPE_SELECTED_IDENTITIES
+    all_destinations  = optional(bool, false)
+  }))
+  default = []
+}
+
+variable "network_policy_ingress_deny_rules" {
+  description = "Ingress deny rules: block workspace access by IP range, identity, and destination. Pending databricks provider support."
+  type = list(object({
+    label            = optional(string)
+    ip_ranges        = optional(list(string))
+    all_ip_ranges    = optional(bool, false)
+    identity_type    = optional(string)
+    all_destinations = optional(bool, false)
+  }))
+  default = []
+}

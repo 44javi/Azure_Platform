@@ -16,7 +16,7 @@ terraform {
     }
     databricks = {
       source  = "databricks/databricks"
-      version = "~> 1.87.0"
+      version = "~> 1.112.0"
     }
   }
 }
@@ -39,6 +39,12 @@ provider "azuread" {
 
 provider "databricks" {
   alias = "create_workspace"
+}
+
+provider "databricks" {
+  alias      = "account"
+  host       = "https://accounts.azuredatabricks.net"
+  account_id = var.account_id
 }
 
 provider "databricks" {
