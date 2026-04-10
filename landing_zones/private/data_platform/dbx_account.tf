@@ -47,39 +47,4 @@ resource "databricks_account_network_policy" "this" {
       }
     }
   }
-
-  # ingress is defined in variables.tf but not yet in the provider schema (v1.112.0).
-  # Uncomment once databricks/databricks provider releases ingress support.
-  #
-  # ingress = {
-  #   public_access = {
-  #     restriction_mode = "RESTRICTED_ACCESS"
-  #
-  #     allow_rules = [
-  #       for rule in var.network_policy_ingress_allow_rules : {
-  #         label = rule.label
-  #         origin = rule.all_ip_ranges ? { all_ip_ranges = true } : {
-  #           included_ip_ranges = { ip_ranges = rule.ip_ranges }
-  #         }
-  #         authentication = rule.identity_type != null ? {
-  #           identity_type = rule.identity_type
-  #         } : null
-  #         destination = { all_destinations = rule.all_destinations }
-  #       }
-  #     ]
-  #
-  #     deny_rules = [
-  #       for rule in var.network_policy_ingress_deny_rules : {
-  #         label = rule.label
-  #         origin = rule.all_ip_ranges ? { all_ip_ranges = true } : {
-  #           included_ip_ranges = { ip_ranges = rule.ip_ranges }
-  #         }
-  #         authentication = rule.identity_type != null ? {
-  #           identity_type = rule.identity_type
-  #         } : null
-  #         destination = { all_destinations = rule.all_destinations }
-  #       }
-  #     ]
-  #   }
-  # }
 }
