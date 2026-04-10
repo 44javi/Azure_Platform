@@ -1,14 +1,21 @@
-# # =============================================================================
-# # DATABRICKS ACCOUNT-LEVEL NETWORK POLICY
-# # =============================================================================
-# # Controls egress from serverless workloads and restricts ingress access to
-# # Databricks workspaces. Enforcement is set to DRY_RUN across all products
-# # until ready to enforce (set enforcement_mode to "ENFORCED" when ready).
+# =============================================================================
+# DATABRICKS ACCOUNT-LEVEL NETWORK POLICY
+# =============================================================================
+# Egress rules are sourced from dbx_network.yml, keyed by var.environment.
+# The security / network team can modify that file without touching Terraform.
+# Enforcement is set to DRY_RUN across all products until ready to enforce
+# (set enforcement_mode to "ENFORCED" when ready).
+
+locals {
+  dbx_network = yamldecode(file("${path.module}/dbx_network.yml"))[var.environment]
+}
 
 # Binds the network policy to one or more workspaces.
+# workspace_id is the numeric Databricks workspace ID — find it with:
+#   terraform state show module.dbx_workspace.azurerm_databricks_workspace.this | grep workspace_id
 resource "databricks_workspace_network_option" "this" {
   provider          = databricks.account
-  for_each          = { for id in var.dbx_workspace_ids : tostring(id) => id }
+  for_each          = { for id in local.dbx_network.workspace_ids : tostring(id) => id }
   workspace_id      = each.value
   network_policy_id = databricks_account_network_policy.this.network_policy_id
 }
@@ -23,14 +30,14 @@ resource "databricks_account_network_policy" "this" {
       restriction_mode = "RESTRICTED_ACCESS"
 
       allowed_internet_destinations = [
-        for dest in var.network_policy_egress_destinations : {
+        for dest in local.dbx_network.egress_destinations : {
           destination               = dest
           internet_destination_type = "DNS_NAME"
         }
       ]
 
       allowed_storage_destinations = [
-        for dest in var.network_policy_storage_destinations : {
+        for dest in local.dbx_network.storage_destinations : {
           azure_storage_account    = dest.storage_account
           azure_storage_service    = dest.storage_service
           storage_destination_type = "AZURE_STORAGE"
@@ -38,7 +45,7 @@ resource "databricks_account_network_policy" "this" {
       ]
 
       policy_enforcement = {
-        enforcement_mode = "DRY_RUN"
+        enforcement_mode = "ENFORCED"
       }
     }
   }

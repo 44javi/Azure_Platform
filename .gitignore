@@ -49,5 +49,8 @@ terraform.rc
 
 .claude*
 
+# Ignore Databricks Account Console egresss policy file
+dbx_network.yml
+
 
 

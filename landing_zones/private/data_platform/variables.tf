@@ -146,26 +146,7 @@ variable "account_id" {
   type        = string
 }
 
-variable "dbx_workspace_ids" {
-  description = "Numeric Databricks workspace IDs to attach the network policy to."
-  type        = list(number)
-  default     = []
-}
 
-variable "network_policy_egress_destinations" {
-  description = "List of allowed FQDN egress destinations for the Databricks account network policy"
-  type        = list(string)
-  default     = []
-}
-
-variable "network_policy_storage_destinations" {
-  description = "List of allowed Azure Storage destinations for the Databricks account network policy"
-  type = list(object({
-    storage_account = string
-    storage_service = string
-  }))
-  default = []
-}
 
 # Ingress fields are pending provider support (not yet in v1.112.0 schema).
 # Variables are defined now so tfvars is ready

@@ -1,0 +1,52 @@
+# Databricks Account Network Policy — Egress Rules
+# -------------------------------------------------------
+# Managed by the security / network team.
+# Changes here are picked up on the next terraform apply.
+#
+# egress_destinations : FQDNs reachable from serverless workloads
+# storage_destinations: Azure Storage accounts reachable from serverless workloads
+#   storage_service options: blob | dfs | file | queue | table
+# -------------------------------------------------------
+
+dev:
+  workspace_ids:
+    - 83827328791987132987132 # dbx-dataplatform-prod
+
+  egress_destinations:
+    - pypi.org
+    - files.pythonhosted.org
+
+  storage_destinations:
+    - storage_account: dataplatformdev
+      storage_service: dfs
+    - storage_account: dataplatformdev
+      storage_service: blob
+
+qa:
+  workspace_ids:
+    - 813897413879987134897143 # dbx-dataplatform-prod
+
+  egress_destinations:
+    - pypi.org
+    - files.pythonhosted.org
+
+  storage_destinations:
+    - storage_account: 
+      storage_service: 
+    - storage_account: 
+      storage_service: 
+
+prod:
+  workspace_ids:
+    -  983218909810243890149801940839804 # dbx-dataplatform-prod
+
+  egress_destinations:
+    - pypi.org
+    - files.pythonhosted.org
+    - gitlab.com
+
+  storage_destinations:
+    - storage_account: adlsprod81388314881348
+      storage_service: dfs
+    - storage_account: adlsprod8932181329891823
+      storage_service: blob
