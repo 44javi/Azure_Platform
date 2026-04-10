@@ -2,7 +2,7 @@
 # DATABRICKS ACCOUNT-LEVEL NETWORK POLICY
 # =============================================================================
 # Egress rules are sourced from dbx_network.yml, keyed by var.environment.
-# The security / network team can modify that file without touching Terraform.
+# The security / network team can modify that file
 # Enforcement is set to DRY_RUN across all products until ready to enforce
 # (set enforcement_mode to "ENFORCED" when ready).
 
@@ -11,8 +11,6 @@ locals {
 }
 
 # Binds the network policy to one or more workspaces.
-# workspace_id is the numeric Databricks workspace ID — find it with:
-#   terraform state show module.dbx_workspace.azurerm_databricks_workspace.this | grep workspace_id
 resource "databricks_workspace_network_option" "this" {
   provider          = databricks.account
   for_each          = { for id in local.dbx_network.workspace_ids : tostring(id) => id }
