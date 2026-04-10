@@ -145,31 +145,3 @@ variable "account_id" {
   description = "Databricks account id"
   type        = string
 }
-
-
-
-# Ingress fields are pending provider support (not yet in v1.112.0 schema).
-# Variables are defined now so tfvars is ready
-variable "network_policy_ingress_allow_rules" {
-  description = "Ingress allow rules: restrict workspace access by IP range, identity, and destination. Pending databricks provider support."
-  type = list(object({
-    label             = optional(string)
-    ip_ranges         = optional(list(string)) # CIDR notation, e.g. ["10.0.0.0/8", "203.0.113.0/24"]
-    all_ip_ranges     = optional(bool, false)
-    identity_type     = optional(string)       # IDENTITY_TYPE_ALL_USERS | IDENTITY_TYPE_ALL_SERVICE_PRINCIPALS | IDENTITY_TYPE_SELECTED_IDENTITIES
-    all_destinations  = optional(bool, false)
-  }))
-  default = []
-}
-
-variable "network_policy_ingress_deny_rules" {
-  description = "Ingress deny rules: block workspace access by IP range, identity, and destination. Pending databricks provider support."
-  type = list(object({
-    label            = optional(string)
-    ip_ranges        = optional(list(string))
-    all_ip_ranges    = optional(bool, false)
-    identity_type    = optional(string)
-    all_destinations = optional(bool, false)
-  }))
-  default = []
-}
