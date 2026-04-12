@@ -2,8 +2,8 @@
 trigger:
   branches:
     include:
-      - dev
-      - test
+      # - dev
+      # - test
       - main
   paths:
     include:
@@ -18,8 +18,8 @@ pool:
 # Shared variables used across all environments
 variables:
   - group: shared-variables
-  - group: portfolio-variables-dev
-  - group: portfolio-variables-test
+  # - group: portfolio-variables-dev
+  # - group: portfolio-variables-test
   - group: portfolio-variables-prod
   - name: tag
     value: "$(Build.BuildId)"
@@ -90,112 +90,106 @@ stages:
               ArtifactName: "drop"
               publishLocation: "Container"
 
-  # Development Deployment Stage
-  - stage: DeployDev
-    displayName: Deploy to Development
-    dependsOn: Build
-    condition: succeeded()
-    variables:
-      - group: portfolio-variables-dev
-    jobs:
-      - job: Deploy
-        displayName: Deploy Container App (Dev)
-        steps:
-          # Download the artifacts from the build stage
-          - task: DownloadBuildArtifacts@1
-            inputs:
-              buildType: "current"
-              downloadType: "single"
-              artifactName: "drop"
-              downloadPath: "$(System.ArtifactsDirectory)"
+  # # Development Deployment Stage
+  # - stage: DeployDev
+  #   displayName: Deploy to Development
+  #   dependsOn: Build
+  #   condition: succeeded()
+  #   variables:
+  #     - group: portfolio-variables-dev
+  #   jobs:
+  #     - job: Deploy
+  #       displayName: Deploy Container App (Dev)
+  #       steps:
+  #         # Download the artifacts from the build stage
+  #         - task: DownloadBuildArtifacts@1
+  #           inputs:
+  #             buildType: "current"
+  #             downloadType: "single"
+  #             artifactName: "drop"
+  #             downloadPath: "$(System.ArtifactsDirectory)"
 
-          - task: AzureCLI@2
-            displayName: Update Container App (Dev)
-            inputs:
-              azureSubscription: $(azureSubscription)
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                # Log deployment info
-                cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
+  #         - task: AzureCLI@2
+  #           displayName: Update Container App (Dev)
+  #           inputs:
+  #             azureSubscription: $(azureSubscription)
+  #             scriptType: "bash"
+  #             scriptLocation: "inlineScript"
+  #             inlineScript: |
+  #               # Log deployment info
+  #               cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
 
-                # Deploy to Container App
-                az containerapp update \
-                  --name $(containerAppName) \
-                  --resource-group $(resourceGroupName) \
-                  --image $(imageRepository):$(tag)
+  #               # Deploy to Container App
+  #               az containerapp update \
+  #                 --name $(containerAppName) \
+  #                 --resource-group $(resourceGroupName) \
+  #                 --image $(imageRepository):$(tag)
 
-                # Record successful deployment
-                echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (DEV) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
+  #               # Record successful deployment
+  #               echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (DEV) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
 
-          - task: PublishBuildArtifacts@1
-            displayName: "Publish Deployment Results"
-            inputs:
-              PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
-              ArtifactName: "deployment-results-dev"
-              publishLocation: "Container"
+  #         - task: PublishBuildArtifacts@1
+  #           displayName: "Publish Deployment Results"
+  #           inputs:
+  #             PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
+  #             ArtifactName: "deployment-results-dev"
+  #             publishLocation: "Container"
 
-  # Test Deployment Stage
-  - stage: DeployTest
-    displayName: Deploy to Test
-    dependsOn: DeployDev
-    condition: or(
-      and(succeeded('DeployDev'), eq(variables['Build.SourceBranch'], 'refs/heads/dev')),
-      eq(variables['Build.SourceBranch'], 'refs/heads/test'),
-      eq(variables['Build.SourceBranch'], 'refs/heads/main')
-      )
-    variables:
-      - group: portfolio-variables-test
-    jobs:
-      - job: Deploy
-        displayName: Deploy Container App (Test)
-        #environment: test  # This creates an approval gate
-        steps:
-          # Download the artifacts from the build stage
-          - task: DownloadBuildArtifacts@1
-            inputs:
-              buildType: "current"
-              downloadType: "single"
-              artifactName: "drop"
-              downloadPath: "$(System.ArtifactsDirectory)"
+  # # Test Deployment Stage
+  # - stage: DeployTest
+  #   displayName: Deploy to Test
+  #   dependsOn: DeployDev
+  #   condition: or(
+  #     and(succeeded('DeployDev'), eq(variables['Build.SourceBranch'], 'refs/heads/dev')),
+  #     eq(variables['Build.SourceBranch'], 'refs/heads/test'),
+  #     eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  #     )
+  #   variables:
+  #     - group: portfolio-variables-test
+  #   jobs:
+  #     - job: Deploy
+  #       displayName: Deploy Container App (Test)
+  #       #environment: test  # This creates an approval gate
+  #       steps:
+  #         # Download the artifacts from the build stage
+  #         - task: DownloadBuildArtifacts@1
+  #           inputs:
+  #             buildType: "current"
+  #             downloadType: "single"
+  #             artifactName: "drop"
+  #             downloadPath: "$(System.ArtifactsDirectory)"
 
-          - task: AzureCLI@2
-            displayName: Update Container App (Test)
-            inputs:
-              azureSubscription: $(azureSubscription)
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                # Log deployment info
-                cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
+  #         - task: AzureCLI@2
+  #           displayName: Update Container App (Test)
+  #           inputs:
+  #             azureSubscription: $(azureSubscription)
+  #             scriptType: "bash"
+  #             scriptLocation: "inlineScript"
+  #             inlineScript: |
+  #               # Log deployment info
+  #               cat $(System.ArtifactsDirectory)/drop/deployment/image-info.txt
 
-                # Deploy to Container App
-                az containerapp update \
-                  --name $(containerAppName) \
-                  --resource-group $(resourceGroupName) \
-                  --image $(imageRepository):$(tag)
+  #               # Deploy to Container App
+  #               az containerapp update \
+  #                 --name $(containerAppName) \
+  #                 --resource-group $(resourceGroupName) \
+  #                 --image $(imageRepository):$(tag)
 
-                # Record successful deployment
-                echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (TEST) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
+  #               # Record successful deployment
+  #               echo "Deployed $(imageRepository):$(tag) to $(containerAppName) (TEST) at $(date)" > $(System.ArtifactsDirectory)/drop/deployment/deployment-log.txt
 
-          - task: PublishBuildArtifacts@1
-            displayName: "Publish Deployment Results"
-            inputs:
-              PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
-              ArtifactName: "deployment-results-test"
-              publishLocation: "Container"
+  #         - task: PublishBuildArtifacts@1
+  #           displayName: "Publish Deployment Results"
+  #           inputs:
+  #             PathtoPublish: "$(System.ArtifactsDirectory)/drop/deployment"
+  #             ArtifactName: "deployment-results-test"
+  #             publishLocation: "Container"
 
   # Production Deployment Stage
   - stage: DeployProd
     displayName: Deploy to Production
-    dependsOn: DeployTest
-    condition: or(
-      and(succeeded('DeployTest'), or(
-      eq(variables['Build.SourceBranch'], 'refs/heads/dev'),
-      eq(variables['Build.SourceBranch'], 'refs/heads/test')
-      )),
-      eq(variables['Build.SourceBranch'], 'refs/heads/main')
-      )
+    dependsOn: Build
+    condition: and(succeeded('Build'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
       - group: portfolio-variables-prod
     jobs:
