@@ -7,10 +7,10 @@ trigger:
       - main
   paths:
     include:
-      - "frontend/**"
-      - "Dockerfile"
+      - "landing_zones/public/portfolio/frontend/**"
+      - "landing_zones/public/portfolio/Dockerfile"
     exclude:
-      - "README.md"
+      - "landing_zones/public/portfolio/README.md"
 
 pool:
   vmImage: "ubuntu-latest"
