@@ -80,9 +80,9 @@ stages:
           - task: CopyFiles@2
             displayName: "Copy Frontend Files to Artifacts"
             inputs:
-              SourceFolder: "$(Build.SourcesDirectory)/frontend"
+              SourceFolder: "$(Build.SourcesDirectory)landing_zones/public/portfolio/frontend/"
               Contents: "**"
-              TargetFolder: "$(Build.ArtifactStagingDirectory)/frontend"
+              TargetFolder: "$(Build.ArtifactStagingDirectory)landing_zones/public/portfolio/frontend/"
 
           # Publish the artifacts
           - task: PublishBuildArtifacts@1
