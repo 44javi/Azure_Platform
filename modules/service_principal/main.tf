@@ -25,8 +25,10 @@ resource "azuread_service_principal" "this" {
   owners                       = [data.azurerm_client_config.current.object_id]
 }
 
-# Create certificate in Key Vault 
+# --- Certificate credential path ---
+
 resource "azurerm_key_vault_certificate" "sp_cert" {
+  count        = var.credential_type == "certificate" ? 1 : 0
   name         = "cert-${var.project}-${var.environment}"
   key_vault_id = var.key_vault_id
 
@@ -78,18 +80,36 @@ resource "azurerm_key_vault_certificate" "sp_cert" {
   }
 }
 
-# Associate certificate with the service principal
 resource "azuread_application_certificate" "sp_cert" {
+  count          = var.credential_type == "certificate" ? 1 : 0
   application_id = azuread_application.this.id
   type           = "AsymmetricX509Cert"
-  encoding       = "hex" # Recommended when integrating with key vault 
-  value          = azurerm_key_vault_certificate.sp_cert.certificate_data
-  #end_date       = "2025-09-01T01:02:03Z"
+  encoding       = "hex" # Recommended when integrating with key vault
+  value          = azurerm_key_vault_certificate.sp_cert[0].certificate_data
 
   lifecycle {
     create_before_destroy = true
-    replace_triggered_by  = [azurerm_key_vault_certificate.sp_cert.certificate_data]
+    replace_triggered_by  = [azurerm_key_vault_certificate.sp_cert[0].certificate_data]
   }
+}
+
+# --- Client secret credential path ---
+
+resource "azuread_application_password" "sp_secret" {
+  count          = var.credential_type == "secret" ? 1 : 0
+  application_id = azuread_application.this.id
+  display_name   = "secret-${var.project}-${var.environment}"
+
+  rotate_when_changed = {
+    rotation = plantimestamp()
+  }
+}
+
+resource "azurerm_key_vault_secret" "sp_secret" {
+  count        = var.credential_type == "secret" ? 1 : 0
+  name         = "secret-${var.project}-${var.environment}"
+  value        = azuread_application_password.sp_secret[0].value
+  key_vault_id = var.key_vault_id
 }
 
 # Create role assignments for the service principal

@@ -29,6 +29,17 @@ variable "key_vault_id" {
   type        = string
 }
 
+variable "credential_type" {
+  description = "Type of credential to create for the service principal: 'certificate' or 'secret'"
+  type        = string
+  default     = "secret"
+
+  validation {
+    condition     = contains(["certificate", "secret"], var.credential_type)
+    error_message = "credential_type must be either 'certificate' or 'secret'."
+  }
+}
+
 variable "role_assignments" {
   description = "Map of role assignments for the service principal"
   type = map(object({
