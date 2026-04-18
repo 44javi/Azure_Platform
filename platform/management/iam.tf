@@ -20,8 +20,14 @@ resource "azuread_group" "External_Users" {
 }
 
 # Create metastore admin
-resource "azuread_group" "metastore_admins" {
-  display_name     = "Metastore_Admins"
+resource "azuread_group" "dbx_metastore_admins" {
+  display_name     = "DBX_Metastore_Admins"
   security_enabled = true
   description      = "Group for users and principals to have access to the metastore"
+}
+
+resource "azuread_group" "dbx_account_admins" {
+  display_name     = "DBX_Account_Admins"
+  security_enabled = true
+  description      = "Group for users and principals to have access to the Databricks account console"
 }
