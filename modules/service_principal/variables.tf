@@ -22,6 +22,7 @@ variable "default_tags" {
 variable "datalake_id" {
   description = "The resource ID of the Azure Data Lake Storage account"
   type        = string
+  default     = ""
 }
 
 variable "key_vault_id" {

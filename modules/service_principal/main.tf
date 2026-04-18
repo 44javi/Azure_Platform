@@ -20,7 +20,7 @@ resource "azuread_application" "this" {
 
 # Create Service Principal
 resource "azuread_service_principal" "this" {
-  client_id                   = azuread_application.this.client_id
+  client_id                    = azuread_application.this.client_id
   app_role_assignment_required = false
   owners                       = [data.azurerm_client_config.current.object_id]
 }
