@@ -95,13 +95,22 @@ resource "azuread_application_certificate" "sp_cert" {
 
 # --- Client secret credential path ---
 
+resource "time_rotating" "sp_secret" {
+  count         = var.credential_type == "secret" ? 1 : 0
+  rotation_days = var.secret_rotation_days
+}
+
 resource "azuread_application_password" "sp_secret" {
   count          = var.credential_type == "secret" ? 1 : 0
   application_id = azuread_application.this.id
   display_name   = "secret-${var.project}-${var.environment}"
 
   rotate_when_changed = {
-    rotation = plantimestamp()
+    rotation = time_rotating.sp_secret[0].id
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -110,6 +119,10 @@ resource "azurerm_key_vault_secret" "sp_secret" {
   name         = "secret-${var.project}-${var.environment}"
   value        = azuread_application_password.sp_secret[0].value
   key_vault_id = var.key_vault_id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Create role assignments for the service principal

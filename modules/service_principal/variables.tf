@@ -41,6 +41,12 @@ variable "credential_type" {
   }
 }
 
+variable "secret_rotation_days" {
+  description = "Number of days before the service principal secret is rotated"
+  type        = number
+  default     = 90
+}
+
 variable "role_assignments" {
   description = "Map of role assignments for the service principal"
   type = map(object({
