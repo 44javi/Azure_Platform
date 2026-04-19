@@ -90,3 +90,17 @@ module "dbx_resources" {
     module.dbx_workspace
   ]
 }
+
+data "azurerm_key_vault" "management" {
+  provider            = azurerm.management
+  name                = var.key_vault_name
+  resource_group_name = var.key_vault_resource_group
+}
+
+module "sat_sp" {
+  source              = "../../../modules/service_principal"
+  project             = "sat"
+  environment         = var.environment
+  resource_group_name = azurerm_resource_group.main.name
+  key_vault_id        = data.azurerm_key_vault.management.id
+}

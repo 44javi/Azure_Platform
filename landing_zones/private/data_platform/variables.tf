@@ -145,3 +145,13 @@ variable "account_id" {
   description = "Databricks account id"
   type        = string
 }
+
+variable "key_vault_name" {
+  description = "Name of the existing Key Vault in the management subscription"
+  type        = string
+}
+
+variable "key_vault_resource_group" {
+  description = "Resource group of the existing Key Vault in the management subscription"
+  type        = string
+}
