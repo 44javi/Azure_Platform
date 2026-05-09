@@ -71,6 +71,14 @@ resource "azurerm_private_endpoint" "adls" {
     subresource_names              = var.pe_subresource_names # For ADLS Gen2
     is_manual_connection           = var.is_manual_connection
   }
+
+  dynamic "private_dns_zone_group" {
+    for_each = length(var.private_dns_zone_ids) > 0 ? [1] : []
+    content {
+      name                 = "storage-dns"
+      private_dns_zone_ids = var.private_dns_zone_ids
+    }
+  }
 }
 
 resource "azurerm_monitor_diagnostic_setting" "adls" {

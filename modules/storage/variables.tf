@@ -140,3 +140,9 @@ variable "is_manual_connection" {
   type        = bool
   default     = false
 }
+
+variable "private_dns_zone_ids" {
+  description = "List of private DNS zone IDs to link to the private endpoint. Leave empty to skip DNS zone group registration."
+  type        = list(string)
+  default     = []
+}
