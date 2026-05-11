@@ -19,10 +19,11 @@ variable "vnet_address_space" {
 variable "subnets" {
   description = "Map of subnet configurations, each with optional NSG rules and NAT gateway association."
   type = map(object({
-    address_prefix           = string
-    name_override            = optional(string)
-    disable_default_outbound = optional(bool, true)
-    attach_nat_gateway       = optional(bool, false)
+    address_prefix                    = string
+    name_override                     = optional(string)
+    disable_default_outbound          = optional(bool, true)
+    attach_nat_gateway                = optional(bool, false)
+    private_endpoint_network_policies = optional(string, "Disabled")
     nsg_rules = optional(list(object({
       name                       = string
       priority                   = number
@@ -35,6 +36,10 @@ variable "subnets" {
       source_address_prefixes    = optional(list(string))
       destination_address_prefix = optional(string, "*")
     })), [])
+    delegation = optional(object({
+      service_name = string
+      actions      = optional(list(string), ["Microsoft.Network/virtualNetworks/subnets/action"])
+    }))
   }))
 }
 
@@ -57,4 +62,10 @@ variable "default_tags" {
   description = "Default tags to apply to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "private_dns_zones" {
+  description = "Private DNS zone names to create (e.g. privatelink.blob.core.windows.net). Add new zones here without changing module code."
+  type        = list(string)
+  default     = []
 }

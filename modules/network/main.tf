@@ -25,11 +25,23 @@ resource "azurerm_subnet" "subnets" {
   for_each = var.subnets
 
   # Use name_override when a fixed name is required (e.g. "AzureBastionSubnet")
-  name                            = coalesce(each.value.name_override, "snet-${each.key}-${var.project}-${var.environment}")
-  resource_group_name             = var.resource_group_name
-  virtual_network_name            = azurerm_virtual_network.vnet.name
-  address_prefixes                = [each.value.address_prefix]
-  default_outbound_access_enabled = !each.value.disable_default_outbound
+  name                              = coalesce(each.value.name_override, "snet-${each.key}-${var.project}-${var.environment}")
+  resource_group_name               = var.resource_group_name
+  virtual_network_name              = azurerm_virtual_network.vnet.name
+  address_prefixes                  = [each.value.address_prefix]
+  default_outbound_access_enabled   = !each.value.disable_default_outbound
+  private_endpoint_network_policies = each.value.private_endpoint_network_policies
+
+  dynamic "delegation" {
+    for_each = each.value.delegation != null ? [each.value.delegation] : []
+    content {
+      name = delegation.value.service_name
+      service_delegation {
+        name    = delegation.value.service_name
+        actions = delegation.value.actions
+      }
+    }
+  }
 }
 
 # NSGs — only created for subnets that declare nsg_rules
@@ -101,4 +113,23 @@ resource "azurerm_subnet_nat_gateway_association" "subnets" {
   nat_gateway_id = azurerm_nat_gateway.this.id
 
   depends_on = [azurerm_nat_gateway.this]
+}
+
+# Private DNS Zones — one per entry in var.private_dns_zones
+resource "azurerm_private_dns_zone" "zones" {
+  for_each            = toset(var.private_dns_zones)
+  name                = each.key
+  resource_group_name = var.resource_group_name
+  tags                = var.default_tags
+}
+
+# VNet links — required for DNS resolution to work from within the VNet
+resource "azurerm_private_dns_zone_virtual_network_link" "zones" {
+  for_each              = toset(var.private_dns_zones)
+  name                  = "link-${replace(each.key, ".", "-")}"
+  resource_group_name   = var.resource_group_name
+  private_dns_zone_name = azurerm_private_dns_zone.zones[each.key].name
+  virtual_network_id    = azurerm_virtual_network.vnet.id
+  registration_enabled  = false
+  tags                  = var.default_tags
 }
