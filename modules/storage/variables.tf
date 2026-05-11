@@ -146,3 +146,9 @@ variable "private_dns_zone_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "create_private_endpoint" {
+  description = "Whether to create the private endpoint inside this module. Set false when the caller manages the PE with a different provider (e.g. connectivity subscription)."
+  type        = bool
+  default     = true
+}

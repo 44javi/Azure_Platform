@@ -58,6 +58,7 @@ resource "azurerm_storage_container" "this" {
 
 # Private Endpoint for ADLS (Azure Data Lake Storage)
 resource "azurerm_private_endpoint" "adls" {
+  count               = var.create_private_endpoint ? 1 : 0
   name                = "pe-adls-${var.project}-${var.environment}"
   location            = var.region
   resource_group_name = var.resource_group_name
@@ -93,9 +94,9 @@ resource "azurerm_monitor_diagnostic_setting" "adls" {
     }
   }
 
-  #enabled_metric {
-  # category = "Transaction"
-  # }
+  enabled_metric {
+    category = "Transaction"
+  }
 }
 
 # Assign Datalake permissions 
