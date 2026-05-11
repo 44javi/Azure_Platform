@@ -25,6 +25,11 @@ variable "management_subscription_id" {
   type        = string
 }
 
+variable "connectivity_subscription_id" {
+  description = "Subscription ID for connectivity resources"
+  type        = string
+}
+
 variable "project" {
   description = "project name for resource naming."
   type        = string
@@ -40,10 +45,10 @@ variable "region" {
   type        = string
 }
 
-variable "resource_group_name" {
-  description = "Resource group name"
-  type        = string
-}
+# variable "resource_group_name" {
+#   description = "Resource group name"
+#   type        = string
+# }
 
 variable "owner" {
   description = "Owner of the project or resources"
@@ -55,33 +60,21 @@ variable "created_by" {
   type        = string
 }
 
-# Networking inputs (assumes VNet/subnets exist in your landing zone)
-variable "vnet_id" {
-  description = "ID of the spoke VNet hosting this workload"
+# Networking — hub VNet lookup (management subscription)
+variable "hub_vnet_name" {
+  description = "Name of the hub VNet in the management subscription"
   type        = string
 }
 
-variable "private_endpoints_subnet_id" {
-  description = "Subnet ID for private endpoints"
+variable "hub_vnet_resource_group_name" {
+  description = "Resource group containing the hub VNet in the management subscription"
   type        = string
 }
 
-variable "appservice_integration_subnet_id" {
-  description = "Subnet ID delegated to Microsoft.Web/serverFarms for App Service VNet integration"
+variable "appservice_integration_subnet_name" {
+  description = "Name of the subnet delegated to Microsoft.Web/serverFarms for App Service VNet integration"
   type        = string
-}
-
-# Private DNS zones (typically centralized in a hub/connectivity sub)
-variable "private_dns_zone_ids" {
-  description = "Map of private DNS zone IDs keyed by service"
-  type = object({
-    app_service     = string # privatelink.azurewebsites.net
-    search          = string # privatelink.search.windows.net
-    cognitive       = string # privatelink.cognitiveservices.azure.com
-    openai          = string # privatelink.openai.azure.com
-    blob            = string # privatelink.blob.core.windows.net
-    key_vault       = string # privatelink.vaultcore.azure.net
-  })
+  default     = ""
 }
 
 # SKUs
@@ -100,10 +93,10 @@ variable "search_sku" {
 variable "openai_model_deployments" {
   description = "Map of OpenAI model deployments to create in the Foundry account"
   type = map(object({
-    model_name     = string
-    model_version  = string
-    sku_name       = string
-    sku_capacity   = number
+    model_name    = string
+    model_version = string
+    sku_name      = string
+    sku_capacity  = number
   }))
   default = {
     chat = {
@@ -115,7 +108,7 @@ variable "openai_model_deployments" {
     embed = {
       model_name    = "text-embedding-3-small"
       model_version = "1"
-      sku_name      = "Standard"
+      sku_name      = "GlobalStandard"
       sku_capacity  = 50
     }
   }
@@ -125,9 +118,31 @@ variable "openai_model_deployments" {
 variable "custom_domain" {
   description = "Custom hostname served by Front Door, e.g. chat.cyberneticparts.com"
   type        = string
+  default     = ""
 }
 
-variable "log_analytics_workspace_id" {
-  description = "Log Analytics workspace for diagnostics"
+variable "law_name" {
+  description = "Name of the Log Analytics workspace in the management subscription"
   type        = string
+}
+
+variable "law_resource_group_name" {
+  description = "Resource group containing the Log Analytics workspace in the management subscription"
+  type        = string
+}
+
+variable "key_vault_name" {
+  description = "Name of the existing Key Vault to reference"
+  type        = string
+}
+
+variable "key_vault_resource_group_name" {
+  description = "Resource group containing the Key Vault"
+  type        = string
+}
+
+variable "adls_logs" {
+  description = "List of Data Lake logs to enable"
+  type        = list(string)
+  default     = []
 }
