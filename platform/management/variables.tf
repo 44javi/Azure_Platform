@@ -72,12 +72,12 @@ variable "policies" {
   description = "Map of short name to policy definition reference ID for each policy in the assigned initiative"
   type        = map(string)
   default = {
-    "assign-uami-vm"   = "adduserassignedmanagedidentity_vm"
-    "ext-linux-vm"     = "deploychangetrackingextensionlinuxvm"
-    "dcra-linux-vm"    = "dcralinuxvmchangetrackingandinventory"
-    "ama-linux-vm-uai" = "deployamalinuxvmwithuaichangetrackingandinventory"
-    "ext-windows-vm"   = "deploychangetrackingextensionwindowsvm"
-    "dcra-windows-vm"  = "dcrawindowsvmchangetrackingandinventory"
+    "assign-uami-vm"     = "adduserassignedmanagedidentity_vm"
+    "ext-linux-vm"       = "deploychangetrackingextensionlinuxvm"
+    "dcra-linux-vm"      = "dcralinuxvmchangetrackingandinventory"
+    "ama-linux-vm-uai"   = "deployamalinuxvmwithuaichangetrackingandinventory"
+    "ext-windows-vm"     = "deploychangetrackingextensionwindowsvm"
+    "dcra-windows-vm"    = "dcrawindowsvmchangetrackingandinventory"
     "ama-windows-vm-uai" = "deployamawindowsvmwithuaichangetrackingandinventory"
   }
 }

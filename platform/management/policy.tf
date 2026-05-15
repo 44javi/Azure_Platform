@@ -56,10 +56,10 @@ resource "azurerm_role_assignment" "change_tracking_user_admin" {
 resource "azurerm_management_group_policy_remediation" "change_tracking" {
   for_each = var.policies
 
-  name                             = "remediate-change-tracking-${each.key}"
-  management_group_id              = azurerm_management_group.cyber_nimbus.id
-  policy_assignment_id             = azurerm_management_group_policy_assignment.change_tracking.id
-  policy_definition_reference_id   = each.value
+  name                           = "remediate-change-tracking-${each.key}"
+  management_group_id            = azurerm_management_group.cyber_nimbus.id
+  policy_assignment_id           = azurerm_management_group_policy_assignment.change_tracking.id
+  policy_definition_reference_id = each.value
 
   depends_on = [
     azurerm_role_assignment.change_tracking_vm_contributor,
