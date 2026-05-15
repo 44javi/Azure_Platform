@@ -32,6 +32,19 @@ variable "environment" {
 variable "region" {
   description = "Region where resources will be created"
   type        = string
+
+  validation {
+    condition = contains([
+      "centralus",
+      "eastus",
+      "eastus2",
+      "westus2",
+      "westus3",
+      "southcentralus",
+      "northcentralus"
+    ], var.region)
+    error_message = "Region must be an approved Azure region."
+  }
 }
 
 variable "alert_email" {
@@ -44,7 +57,27 @@ variable "owner" {
   type        = string
 }
 
+variable "regions" {
+  description = "Azure regions the Change Tracking policy targets"
+  type        = list(string)
+  default     = ["centralus", "westus2"]
+}
+
 variable "created_by" {
   description = "Tag showing Terraform created this resource"
   type        = string
+}
+
+variable "policies" {
+  description = "Map of short name to policy definition reference ID for each policy in the assigned initiative"
+  type        = map(string)
+  default = {
+    "assign-uami-vm"   = "adduserassignedmanagedidentity_vm"
+    "ext-linux-vm"     = "deploychangetrackingextensionlinuxvm"
+    "dcra-linux-vm"    = "dcralinuxvmchangetrackingandinventory"
+    "ama-linux-vm-uai" = "deployamalinuxvmwithuaichangetrackingandinventory"
+    "ext-windows-vm"   = "deploychangetrackingextensionwindowsvm"
+    "dcra-windows-vm"  = "dcrawindowsvmchangetrackingandinventory"
+    "ama-windows-vm-uai" = "deployamawindowsvmwithuaichangetrackingandinventory"
+  }
 }
