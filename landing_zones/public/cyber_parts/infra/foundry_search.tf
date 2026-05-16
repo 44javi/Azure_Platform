@@ -1,14 +1,14 @@
 ############################################
 # Azure AI Foundry (Cognitive Services account, kind=AIServices)
-# Hosts OpenAI model deployments
 ############################################
 resource "azurerm_cognitive_account" "foundry" {
-  name                          = "ai-${var.project}-${var.environment}"
+  name                          = "foundry-${var.project}-${var.environment}"
   resource_group_name           = azurerm_resource_group.main.name
   location                      = var.region
   kind                          = "AIServices"
   sku_name                      = "S0"
-  custom_subdomain_name         = "ai-${var.project}-${var.environment}"
+  custom_subdomain_name         = "dns-foundry-${var.project}-${var.environment}"
+  project_management_enabled    = true
   public_network_access_enabled = false
   local_auth_enabled            = false # AAD only
   tags                          = var.default_tags
@@ -38,21 +38,19 @@ resource "azurerm_cognitive_deployment" "models" {
 resource "azurerm_private_endpoint" "foundry" {
   # PE must live in the connectivity subscription alongside its subnet — Azure's
   # cross-subscription VNet reference validation fails when PE and subnet are in
-  # different subscriptions (Azure uppercases the path and does a case-sensitive
-  # lookup, missing the lowercase-named VNet).
+  # different subscriptions 
   provider            = azurerm.connectivity
-  name                = "pe-ai-${var.project}-${var.environment}"
+  name                = "pe-foundry-${var.project}-${var.environment}"
   resource_group_name = var.hub_vnet_resource_group_name
   location            = var.region
   subnet_id           = data.azurerm_subnet.foundry.id
   tags                = var.default_tags
 
-  # Model deployments put the account in "Accepted" state; wait for them to
   # finish so the account is fully provisioned before attaching the PE.
   depends_on = [azurerm_cognitive_deployment.models]
 
   private_service_connection {
-    name                           = "psc-ai-${var.project}-${var.environment}"
+    name                           = "psc-foundry-${var.project}-${var.environment}"
     private_connection_resource_id = azurerm_cognitive_account.foundry.id
     subresource_names              = ["account"]
     is_manual_connection           = false
@@ -70,7 +68,6 @@ resource "azurerm_private_endpoint" "foundry" {
 
 ############################################
 # Azure AI Search — private, system-assigned identity
-# so it can pull from Storage over private endpoint
 ############################################
 resource "azurerm_search_service" "this" {
   name                          = "srch-${var.project}-${var.environment}"
@@ -80,7 +77,7 @@ resource "azurerm_search_service" "this" {
   replica_count                 = 1
   partition_count               = 1
   public_network_access_enabled = false
-  local_authentication_enabled  = false # disable API keys, force AAD
+  local_authentication_enabled  = false # disable API keys
   semantic_search_sku           = "standard"
   network_rule_bypass_option    = "AzureServices"
   tags                          = var.default_tags
@@ -119,5 +116,3 @@ resource "azurerm_search_shared_private_link_service" "storage" {
   target_resource_id = module.docs_storage.id
   request_message    = "AI Search to Storage for indexer"
 }
-
-

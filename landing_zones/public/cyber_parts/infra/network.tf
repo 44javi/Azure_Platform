@@ -65,18 +65,6 @@ data "azurerm_private_dns_zone" "app_service" {
   resource_group_name = var.hub_vnet_resource_group_name
 }
 
-data "azurerm_private_dns_zone" "aml_api" {
-  provider            = azurerm.connectivity
-  name                = "privatelink.api.azureml.ms"
-  resource_group_name = var.hub_vnet_resource_group_name
-}
-
-data "azurerm_private_dns_zone" "aml_notebooks" {
-  provider            = azurerm.connectivity
-  name                = "privatelink.notebooks.azure.net"
-  resource_group_name = var.hub_vnet_resource_group_name
-}
-
 # --------------------------------------------------------------------------
 # Log Analytics Workspace — managed centrally in the management subscription
 # --------------------------------------------------------------------------
