@@ -36,17 +36,12 @@ resource "azurerm_cognitive_deployment" "models" {
 }
 
 resource "azurerm_private_endpoint" "foundry" {
-  # PE must live in the connectivity subscription alongside its subnet — Azure's
-  # cross-subscription VNet reference validation fails when PE and subnet are in
-  # different subscriptions 
-  provider            = azurerm.connectivity
   name                = "pe-foundry-${var.project}-${var.environment}"
-  resource_group_name = var.hub_vnet_resource_group_name
+  resource_group_name = azurerm_resource_group.main.name
   location            = var.region
-  subnet_id           = data.azurerm_subnet.foundry.id
+  subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
   tags                = var.default_tags
 
-  # finish so the account is fully provisioned before attaching the PE.
   depends_on = [azurerm_cognitive_deployment.models]
 
   private_service_connection {
@@ -56,10 +51,10 @@ resource "azurerm_private_endpoint" "foundry" {
     is_manual_connection           = false
   }
 
-  # AIServices needs both DNS zones registered
   private_dns_zone_group {
     name = "default"
     private_dns_zone_ids = [
+      data.azurerm_private_dns_zone.services_ai.id,
       data.azurerm_private_dns_zone.cognitive.id,
       data.azurerm_private_dns_zone.openai.id,
     ]
@@ -88,11 +83,10 @@ resource "azurerm_search_service" "this" {
 }
 
 resource "azurerm_private_endpoint" "search" {
-  provider            = azurerm.connectivity
   name                = "pe-srch-${var.project}-${var.environment}"
-  resource_group_name = var.hub_vnet_resource_group_name
+  resource_group_name = azurerm_resource_group.main.name
   location            = var.region
-  subnet_id           = data.azurerm_subnet.foundry.id
+  subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
   tags                = var.default_tags
 
   private_service_connection {

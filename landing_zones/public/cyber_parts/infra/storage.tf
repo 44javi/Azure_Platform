@@ -23,9 +23,9 @@ module "docs_storage" {
   environment         = var.environment
   default_tags        = local.default_tags
 
-  subnet_id        = data.azurerm_subnet.foundry.id
-  vnet_id          = data.azurerm_virtual_network.hub.id
-  vnet_name        = data.azurerm_virtual_network.hub.name
+  subnet_id        = azurerm_subnet.spoke["privateendpoints"].id
+  vnet_id          = azurerm_virtual_network.spoke.id
+  vnet_name        = azurerm_virtual_network.spoke.name
   log_analytics_id = data.azurerm_log_analytics_workspace.this.id
 
   containers = ["documents"]
@@ -43,11 +43,10 @@ module "docs_storage" {
 }
 
 resource "azurerm_private_endpoint" "adls" {
-  provider            = azurerm.connectivity
   name                = "pe-adls-cyberparts-${var.environment}"
-  resource_group_name = var.hub_vnet_resource_group_name
+  resource_group_name = azurerm_resource_group.main.name
   location            = var.region
-  subnet_id           = data.azurerm_subnet.foundry.id
+  subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
   tags                = local.default_tags
 
   private_service_connection {

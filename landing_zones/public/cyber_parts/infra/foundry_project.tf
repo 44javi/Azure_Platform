@@ -13,3 +13,4 @@ resource "azurerm_cognitive_account_project" "this" {
     type = "SystemAssigned"
   }
 }
+

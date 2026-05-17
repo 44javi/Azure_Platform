@@ -60,21 +60,54 @@ variable "created_by" {
   type        = string
 }
 
-# Networking — hub VNet lookup (management subscription)
+# Networking — hub VNet lookup (connectivity subscription)
 variable "hub_vnet_name" {
-  description = "Name of the hub VNet in the management subscription"
+  description = "Name of the hub VNet in the connectivity subscription"
   type        = string
 }
 
 variable "hub_vnet_resource_group_name" {
-  description = "Resource group containing the hub VNet in the management subscription"
+  description = "Resource group containing the hub VNet in the connectivity subscription"
   type        = string
 }
 
-variable "appservice_integration_subnet_name" {
-  description = "Name of the subnet delegated to Microsoft.Web/serverFarms for App Service VNet integration"
+variable "enable_vpn" {
+  description = "Set to true when the hub VPN Gateway is deployed. Enables gateway transit on the hub→spoke peering and use_remote_gateways on the spoke→hub peering so VPN clients can reach this spoke."
+  type        = bool
+  default     = false
+}
+
+# Networking — foundry spoke VNet (this subscription)
+variable "spoke_vnet_address_space" {
+  description = "Address space for the foundry spoke VNet (e.g. 10.80.0.0/21)"
   type        = string
-  default     = ""
+}
+
+variable "subnets" {
+  description = "Subnet configurations for the foundry spoke VNet. Matches the network module schema."
+  type = map(object({
+    address_prefix                    = string
+    name_override                     = optional(string)
+    disable_default_outbound          = optional(bool, true)
+    attach_nat_gateway                = optional(bool, false)
+    private_endpoint_network_policies = optional(string, "Disabled")
+    nsg_rules = optional(list(object({
+      name                       = string
+      priority                   = number
+      direction                  = string
+      access                     = string
+      protocol                   = string
+      source_port_range          = optional(string, "*")
+      destination_port_range     = string
+      source_address_prefix      = optional(string)
+      source_address_prefixes    = optional(list(string))
+      destination_address_prefix = optional(string, "*")
+    })), [])
+    delegation = optional(object({
+      service_name = string
+      actions      = optional(list(string), ["Microsoft.Network/virtualNetworks/subnets/action"])
+    }))
+  }))
 }
 
 # SKUs
@@ -145,4 +178,22 @@ variable "adls_logs" {
   description = "List of Data Lake logs to enable"
   type        = list(string)
   default     = []
+}
+
+variable "foundry_rbac_groups" {
+  description = "Map of AAD groups to assign roles on the Foundry account"
+  type = map(object({
+    group_name           = string
+    role_definition_name = string
+  }))
+  default = {}
+}
+
+variable "foundry_rbac_users" {
+  description = "Map of users (by email/UPN) to assign roles on the Foundry account"
+  type = map(object({
+    email                = string
+    role_definition_name = string
+  }))
+  default = {}
 }

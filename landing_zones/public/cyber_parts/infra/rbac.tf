@@ -55,3 +55,31 @@ resource "azurerm_role_assignment" "search_to_openai" {
   role_definition_name = "Cognitive Services OpenAI User"
   principal_id         = azurerm_search_service.this.identity[0].principal_id
 }
+
+############################################
+# RBAC — Foundry account: groups and users
+############################################
+
+data "azuread_group" "foundry_groups" {
+  for_each     = var.foundry_rbac_groups
+  display_name = each.value.group_name
+}
+
+data "azuread_user" "foundry_users" {
+  for_each            = var.foundry_rbac_users
+  user_principal_name = each.value.email
+}
+
+resource "azurerm_role_assignment" "foundry_groups" {
+  for_each             = var.foundry_rbac_groups
+  scope                = azurerm_cognitive_account.foundry.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_group.foundry_groups[each.key].object_id
+}
+
+resource "azurerm_role_assignment" "foundry_users" {
+  for_each             = var.foundry_rbac_users
+  scope                = azurerm_cognitive_account.foundry.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_user.foundry_users[each.key].object_id
+}
