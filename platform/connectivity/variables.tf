@@ -75,3 +75,61 @@ variable "private_dns_zones" {
   type        = list(string)
   default     = []
 }
+
+# ---- VPN Gateway (Point-to-Site) ----
+
+variable "enable_vpn_gateway" {
+  description = "Deploy an Azure VPN Gateway for Point-to-Site (P2S) client access."
+  type        = bool
+  default     = false
+}
+
+variable "vpn_gateway_sku" {
+  description = "VPN Gateway SKU. P2S session limits: VpnGw1=250, VpnGw2=500, VpnGw3=1000. Note: northcentralus does not support AZ SKUs."
+  type        = string
+  default     = "VpnGw1"
+}
+
+variable "vpn_client_protocols" {
+  description = "Tunnel protocols offered to P2S clients. OpenVPN is required for Entra ID auth. Valid values: OpenVPN, IkeV2, SSTP."
+  type        = list(string)
+  default     = ["OpenVPN"]
+  validation {
+    condition     = length([for p in var.vpn_client_protocols : p if !contains(["OpenVPN", "IkeV2", "SSTP"], p)]) == 0
+    error_message = "Valid vpn_client_protocols values: OpenVPN, IkeV2, SSTP."
+  }
+}
+
+variable "vpn_auth_types" {
+  description = "Authentication methods for P2S. AAD (Entra ID) requires OpenVPN protocol. Valid values: AAD, Certificate, Radius."
+  type        = list(string)
+  default     = ["AAD"]
+  validation {
+    condition     = length([for a in var.vpn_auth_types : a if !contains(["AAD", "Certificate", "Radius"], a)]) == 0
+    error_message = "Valid vpn_auth_types values: AAD, Certificate, Radius."
+  }
+}
+
+variable "vpn_client_address_pool" {
+  description = "CIDR block assigned to P2S VPN clients. Must not overlap with the hub VNet or any peered spoke VNets."
+  type        = string
+  default     = "172.16.201.0/24"
+}
+
+variable "tenant_id" {
+  description = "Entra ID tenant ID. Required when vpn_auth_types includes 'AAD'"
+  type        = string
+  default     = null
+}
+
+variable "vpn_aad_audience" {
+  description = "Azure VPN application (client) ID in Entra ID. Default is the well-known app ID for Azure Public cloud. Tenant admin consent is required."
+  type        = string
+  default     = "41b23e61-6c1e-4545-b367-cd054e0ed4b5"
+}
+
+variable "vpn_root_cert_data" {
+  description = "Base64-encoded public key of the root certificate (no PEM header/footer). Required when vpn_auth_types includes 'Certificate'."
+  type        = string
+  default     = null
+}
