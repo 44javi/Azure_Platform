@@ -85,9 +85,9 @@ variable "enable_vpn_gateway" {
 }
 
 variable "vpn_gateway_sku" {
-  description = "VPN Gateway SKU. P2S session limits: VpnGw1=250, VpnGw2=500, VpnGw3=1000. Note: northcentralus does not support AZ SKUs."
+  description = "VPN Gateway SKU. P2S session limits: VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw3AZ, VpnGw4AZ, VpnGw5AZ"
   type        = string
-  default     = "VpnGw1"
+  default     = "VpnGw1AZ"
 }
 
 variable "vpn_client_protocols" {
