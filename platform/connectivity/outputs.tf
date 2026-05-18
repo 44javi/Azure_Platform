@@ -17,3 +17,8 @@ output "vpn_gateway_public_ip" {
   description = "VPN Gateway public IP — use this as the server address in your VPN client profile"
   value       = var.enable_vpn_gateway ? azurerm_public_ip.vpn_gateway[0].ip_address : null
 }
+
+output "dns_resolver_inbound_ip" {
+  description = "DNS Private Resolver inbound endpoint IP — VPN clients use this for DNS after re-downloading the VPN profile"
+  value       = var.enable_dns_resolver ? azurerm_private_dns_resolver_inbound_endpoint.hub[0].ip_configurations[0].private_ip_address : null
+}

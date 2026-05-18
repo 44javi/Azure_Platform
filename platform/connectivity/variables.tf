@@ -125,11 +125,19 @@ variable "tenant_id" {
 variable "vpn_aad_audience" {
   description = "Azure VPN application (client) ID in Entra ID. Default is the well-known app ID for Azure Public cloud. Tenant admin consent is required."
   type        = string
-  default     = "41b23e61-6c1e-4545-b367-cd054e0ed4b5"
+  default     = "c632b3df-fb67-4d84-bdcf-b95ad541b5c8"
 }
 
 variable "vpn_root_cert_data" {
   description = "Base64-encoded public key of the root certificate (no PEM header/footer). Required when vpn_auth_types includes 'Certificate'."
   type        = string
   default     = null
+}
+
+# ---- Azure DNS Private Resolver ----
+
+variable "enable_dns_resolver" {
+  description = "Deploy an Azure DNS Private Resolver inbound endpoint in the hub VNet. Required for P2S VPN clients to resolve private endpoint FQDNs. Needs a dns_resolver subnet in var.subnets."
+  type        = bool
+  default     = false
 }
