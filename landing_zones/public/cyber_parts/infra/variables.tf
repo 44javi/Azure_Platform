@@ -197,3 +197,9 @@ variable "foundry_rbac_users" {
   }))
   default = {}
 }
+
+variable "replication" {
+  description = "Storage account replication type (LRS, ZRS, GRS, GZRS)"
+  type        = string
+  default     = "ZRS"
+}

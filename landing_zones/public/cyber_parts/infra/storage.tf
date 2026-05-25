@@ -34,7 +34,7 @@ module "docs_storage" {
   is_hns_enabled                  = false
   account_kind                    = "StorageV2"
   account_tier                    = "Standard"
-  account_replication_type        = "LRS"
+  account_replication_type        = var.replication
   public_network_access_enabled   = false
   allow_nested_items_to_be_public = false
   pe_subresource_names            = ["blob"]
@@ -42,15 +42,15 @@ module "docs_storage" {
   create_private_endpoint         = false
 }
 
-resource "azurerm_private_endpoint" "adls" {
-  name                = "pe-adls-cyberparts-${var.environment}"
+resource "azurerm_private_endpoint" "st" {
+  name                = "pe-st-cyberparts-${var.environment}"
   resource_group_name = azurerm_resource_group.main.name
   location            = var.region
   subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
   tags                = local.default_tags
 
   private_service_connection {
-    name                           = "adlsConnection"
+    name                           = "stconnection"
     private_connection_resource_id = module.docs_storage.id
     subresource_names              = ["blob"]
     is_manual_connection           = false
