@@ -85,9 +85,27 @@ variable "enable_vpn_gateway" {
 }
 
 variable "vpn_gateway_sku" {
-  description = "VPN Gateway SKU. P2S session limits: VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw3AZ, VpnGw4AZ, VpnGw5AZ"
+  description = "VPN Gateway SKU. P2S session limits: VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw3AZ, VpnGw4AZ, VpnGw5AZ, HighPerformance (For Active-Active)."
   type        = string
   default     = "VpnGw1AZ"
+}
+
+variable "vpn_gateway_type" {
+  description = "Gateway type. Vpn or ExpressRoute."
+  type        = string
+  default     = "Vpn"
+}
+
+variable "vpn_gateway_bgp_enabled" {
+  description = "Enable BGP on the gateway. May be required for active-active mode and S2S connections that use dynamic routing."
+  type        = bool
+  default     = false
+}
+
+variable "vpn_gateway_active_active" {
+  description = "Enable active-active mode for higher availability."
+  type        = bool
+  default     = false
 }
 
 variable "vpn_client_protocols" {

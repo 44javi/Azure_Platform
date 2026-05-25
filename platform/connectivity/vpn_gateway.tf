@@ -18,11 +18,11 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   name                = "vpngw-${var.project}-${var.environment}"
   resource_group_name = azurerm_resource_group.main.name
   location            = var.region
-  type                = "Vpn"
+  type                = var.vpn_gateway_type
   vpn_type            = "RouteBased"
   sku                 = var.vpn_gateway_sku
-  bgp_enabled         = false
-  active_active       = false
+  bgp_enabled         = var.vpn_gateway_bgp_enabled
+  active_active       = var.vpn_gateway_active_active
 
   ip_configuration {
     name                          = "vnetGatewayConfig"

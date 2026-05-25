@@ -7,7 +7,7 @@ resource "azurerm_private_dns_resolver" "hub" {
   tags                = local.default_tags
 }
 
-# Inbound endpoint — gets a real private IP inside the hub VNet (10.79.254.x).
+# Inbound endpoint — gets a private IP inside the hub VNet (10.79.254.x).
 # VPN clients use this IP for DNS, it's reachable through the tunnel, and the
 # resolver forwards to 168.63.129.16 internally from within Azure where it IS accessible.
 resource "azurerm_private_dns_resolver_inbound_endpoint" "hub" {
