@@ -39,7 +39,7 @@ module "docs_storage" {
   allow_nested_items_to_be_public = false
   pe_subresource_names            = ["blob"]
   private_dns_zone_ids            = [data.azurerm_private_dns_zone.blob.id]
-  create_private_endpoint         = false
+  create_private_endpoint         = true
 }
 
 resource "azurerm_private_endpoint" "st" {
