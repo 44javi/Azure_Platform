@@ -14,6 +14,11 @@ variable "subscription_id" {
   type        = string
 }
 
+variable "management_subscription_id" {
+  description = "Subscription ID for management resources"
+  type        = string
+}
+
 variable "project" {
   description = "project name for resource naming."
   type        = string
@@ -85,7 +90,7 @@ variable "enable_vpn_gateway" {
 }
 
 variable "vpn_gateway_sku" {
-  description = "VPN Gateway SKU. P2S session limits: VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw3AZ, VpnGw4AZ, VpnGw5AZ, HighPerformance (For Active-Active)."
+  description = "VPN Gateway SKU. P2S session limits: Basic, VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw3AZ, VpnGw4AZ, VpnGw5AZ, HighPerformance (For Active-Active)."
   type        = string
   default     = "VpnGw1AZ"
 }
@@ -109,12 +114,12 @@ variable "vpn_gateway_active_active" {
 }
 
 variable "vpn_client_protocols" {
-  description = "Tunnel protocols offered to P2S clients. OpenVPN is required for Entra ID auth. Valid values: OpenVPN, IkeV2, SSTP."
+  description = "Tunnel protocols offered to P2S clients. OpenVPN is required for Entra ID (AAD) auth. Valid values: OpenVPN, IkeV2. SSTP was retired March 31, 2026 and can no longer be enabled."
   type        = list(string)
-  default     = ["OpenVPN"]
+  default     = ["IkeV2"]
   validation {
-    condition     = length([for p in var.vpn_client_protocols : p if !contains(["OpenVPN", "IkeV2", "SSTP"], p)]) == 0
-    error_message = "Valid vpn_client_protocols values: OpenVPN, IkeV2, SSTP."
+    condition     = length([for p in var.vpn_client_protocols : p if !contains(["OpenVPN", "IkeV2"], p)]) == 0
+    error_message = "Valid vpn_client_protocols values: OpenVPN, IkeV2. SSTP was retired March 31, 2026 — use IkeV2 or OpenVPN."
   }
 }
 
@@ -146,10 +151,22 @@ variable "vpn_aad_audience" {
   default     = "c632b3df-fb67-4d84-bdcf-b95ad541b5c8"
 }
 
-variable "vpn_root_cert_data" {
-  description = "Base64-encoded public key of the root certificate (no PEM header/footer). Required when vpn_auth_types includes 'Certificate'."
+variable "mg_kv_name" {
+  description = "Name of the central Key Vault in the management subscription that holds shared secrets such as the VPN root CA cert."
   type        = string
   default     = null
+}
+
+variable "mg_kv_rg" {
+  description = "Resource group of the central Key Vault (mg_kv_name) in the management subscription."
+  type        = string
+  default     = null
+}
+
+variable "vpn_root_cert_kv_secret_name" {
+  description = "Secret name within mg_kv_name that contains the base64 public cert data of the P2S VPN root CA."
+  type        = string
+  default     = "p2s-root-cert-data"
 }
 
 # ---- Azure DNS Private Resolver ----
