@@ -53,4 +53,6 @@ terraform.rc
 dbx_network.yml
 
 
-
+Ignore Certificates and keys
+*.crt
+*.key
