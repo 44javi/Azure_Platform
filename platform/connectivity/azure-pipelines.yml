@@ -54,7 +54,7 @@ variables:
   ARM_SUBSCRIPTION_ID: dfaadf52-1515-4e5b-a5ec-a5e0a6a3331f
   ARM_USE_OIDC: "true"
   ARM_USE_AZUREAD: "true"   # Required: provider has storage_use_azuread = true
-  SERVICE_CONNECTION: sc-connectivity-tf   # Change to match your ADO service connection name
+  SERVICE_CONNECTION: connectivity_connection   # Change to match your ADO service connection name
 
 pool:
   vmImage: ubuntu-latest
