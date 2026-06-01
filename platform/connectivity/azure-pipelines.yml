@@ -26,6 +26,7 @@
 #     provider versions and commit the updated .terraform.lock.hcl.
 
 trigger:
+  batch: true   # queue new commits instead of spawning concurrent runs
   branches:
     include:
       - main
