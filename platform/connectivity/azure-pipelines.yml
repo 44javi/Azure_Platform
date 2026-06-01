@@ -1,0 +1,231 @@
+# Azure DevOps Pipeline — Connectivity Hub Terraform
+#
+# Authentication: Workload Identity Federation (OIDC) — no secrets stored anywhere.
+# The AzureCLI@2 task injects $servicePrincipalId / $tenantId / $idToken at runtime.
+#
+# Prerequisites:
+#   1. Service connection: create an "Azure Resource Manager" service connection using
+#      "Workload Identity Federation" (manual or automatic). Set SERVICE_CONNECTION below.
+#   2. Grant the service principal:
+#        Contributor (or scoped custom role) on subscription (connectivity)
+#        Storage Blob Data Contributor on storage account (Terraform state)
+#        Reader on subscription (management) 
+#        Key Vault Secrets User on kv-management-prod if vpn cert auth is enabled
+#   3. Create two ADO Environments and add an "Approvals" check to each:
+#        connectivity-prod          — gates terraform apply
+#        connectivity-prod-destroy  — gates terraform destroy
+#
+# Usage:
+#   Push to main        → auto-triggers Plan → Apply (waits for approval on environment)
+#   Run pipeline manually, select action=destroy → Plan -destroy → Destroy (waits for approval)
+#
+# Deprecation notes:
+#   - Client-secret service connections are being phased out; this uses WIF instead.
+#   - PublishBuildArtifacts@1 (classic) is replaced by PublishPipelineArtifact@1 used here.
+#   - terraform init -upgrade is intentionally omitted in CI; run it locally when bumping
+#     provider versions and commit the updated .terraform.lock.hcl.
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - platform/connectivity/**
+
+pr: none
+
+parameters:
+  - name: action
+    displayName: Action
+    type: string
+    default: apply
+    values:
+      - apply
+      - destroy
+
+variables:
+  TF_DIR: $(Build.SourcesDirectory)/platform/connectivity
+  BACKEND_SUBSCRIPTION_ID: 1e47212e-ee75-4da1-aaf5-ed252046cdea
+  BACKEND_RESOURCE_GROUP: rg-state-prod
+  BACKEND_STORAGE_ACCOUNT: stmanagementstateprodw
+  BACKEND_STORAGE_CONTAINER: management-state-prod
+  BACKEND_KEY: connectivity-prod
+  ARM_SUBSCRIPTION_ID: dfaadf52-1515-4e5b-a5ec-a5e0a6a3331f
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"   # Required: provider has storage_use_azuread = true
+  SERVICE_CONNECTION: sc-connectivity-tf   # Change to match your ADO service connection name
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  # ------------------------------------------------------------------
+  # Stage 1 — Plan
+  # Always runs. Adds -destroy flag when action=destroy so the plan
+  # shows exactly what will be removed before approval.
+  # ------------------------------------------------------------------
+  - stage: Plan
+    displayName: Terraform Plan
+    jobs:
+      - job: plan
+        displayName: Init & Plan
+        steps:
+          - script: |
+              wget -qO- https://apt.releases.hashicorp.com/gpg \
+                | gpg --dearmor \
+                | sudo tee /usr/share/keyrings/hashicorp.gpg > /dev/null
+              echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+                | sudo tee /etc/apt/sources.list.d/hashicorp.list
+              sudo apt-get update -qq && sudo apt-get install -y terraform
+              terraform version
+            displayName: Install Terraform
+
+          - task: AzureCLI@2
+            displayName: Terraform Init & Plan
+            inputs:
+              azureSubscription: $(SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              workingDirectory: $(TF_DIR)
+              inlineScript: |
+                # Map WIF-injected vars to what the AzureRM provider expects
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+
+                terraform init -reconfigure \
+                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
+                  -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
+                  -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \
+                  -backend-config="key=$(BACKEND_KEY)"
+
+                DESTROY_FLAG=""
+                [[ "${{ parameters.action }}" == "destroy" ]] && DESTROY_FLAG="-destroy"
+
+                terraform plan \
+                  $DESTROY_FLAG \
+                  -var-file=./env/prod.tfvars \
+                  -out=$(TF_DIR)/tfplan
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Plan Artifact
+            inputs:
+              targetPath: $(TF_DIR)/tfplan
+              artifact: tfplan
+
+  # ------------------------------------------------------------------
+  # Stage 2 — Apply
+  # Runs only when action=apply (the default for push-to-main triggers).
+  #
+  # To add an approval gate later:
+  #   1. Change '- job: apply' to '- deployment: apply'
+  #   2. Uncomment the environment line
+  #   3. Wrap steps under: strategy: { runOnce: { deploy: { steps: } } }
+  # ------------------------------------------------------------------
+  - stage: Apply
+    displayName: Terraform Apply
+    dependsOn: Plan
+    condition: and(succeeded(), eq('${{ parameters.action }}', 'apply'))
+    jobs:
+      - job: apply
+        displayName: Apply
+        # environment: connectivity-prod
+        steps:
+          - checkout: self
+
+          - script: |
+              wget -qO- https://apt.releases.hashicorp.com/gpg \
+                | gpg --dearmor \
+                | sudo tee /usr/share/keyrings/hashicorp.gpg > /dev/null
+              echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+                | sudo tee /etc/apt/sources.list.d/hashicorp.list
+              sudo apt-get update -qq && sudo apt-get install -y terraform
+            displayName: Install Terraform
+
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Plan
+            inputs:
+              artifactName: tfplan
+              targetPath: $(TF_DIR)
+
+          - task: AzureCLI@2
+            displayName: Terraform Init & Apply
+            inputs:
+              azureSubscription: $(SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              workingDirectory: $(TF_DIR)
+              inlineScript: |
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+
+                terraform init -reconfigure \
+                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
+                  -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
+                  -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \
+                  -backend-config="key=$(BACKEND_KEY)"
+
+                terraform apply -auto-approve $(TF_DIR)/tfplan
+
+  # ------------------------------------------------------------------
+  # Stage 3 — Destroy
+  # Only runs when action=destroy (manual pipeline run).
+  #
+  # To add an approval gate later:
+  #   1. Change '- job: destroy' to '- deployment: destroy'
+  #   2. Uncomment the environment line
+  #   3. Wrap steps under: strategy: { runOnce: { deploy: { steps: } } }
+  # ------------------------------------------------------------------
+  - stage: Destroy
+    displayName: Terraform Destroy
+    dependsOn: Plan
+    condition: and(succeeded(), eq('${{ parameters.action }}', 'destroy'))
+    jobs:
+      - job: destroy
+        displayName: Destroy
+        # environment: connectivity-prod-destroy
+        steps:
+          - checkout: self
+
+          - script: |
+              wget -qO- https://apt.releases.hashicorp.com/gpg \
+                | gpg --dearmor \
+                | sudo tee /usr/share/keyrings/hashicorp.gpg > /dev/null
+              echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+                | sudo tee /etc/apt/sources.list.d/hashicorp.list
+              sudo apt-get update -qq && sudo apt-get install -y terraform
+            displayName: Install Terraform
+
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Plan
+            inputs:
+              artifactName: tfplan
+              targetPath: $(TF_DIR)
+
+          - task: AzureCLI@2
+            displayName: Terraform Init & Destroy
+            inputs:
+              azureSubscription: $(SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              workingDirectory: $(TF_DIR)
+              inlineScript: |
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+
+                terraform init -reconfigure \
+                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
+                  -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
+                  -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \
+                  -backend-config="key=$(BACKEND_KEY)"
+
+                terraform apply -auto-approve $(TF_DIR)/tfplan
