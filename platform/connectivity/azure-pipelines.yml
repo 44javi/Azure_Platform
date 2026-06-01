@@ -46,12 +46,11 @@ parameters:
 
 variables:
   TF_DIR: $(Build.SourcesDirectory)/platform/connectivity
-  BACKEND_SUBSCRIPTION_ID: 1e47212e-ee75-4da1-aaf5-ed252046cdea
+  KV_NAME: kv-management-prod-5209
   BACKEND_RESOURCE_GROUP: rg-state-prod
   BACKEND_STORAGE_ACCOUNT: stmanagementstateprodw
   BACKEND_STORAGE_CONTAINER: management-state-prod
   BACKEND_KEY: connectivity-prod
-  ARM_SUBSCRIPTION_ID: dfaadf52-1515-4e5b-a5ec-a5e0a6a3331f
   ARM_USE_OIDC: "true"
   ARM_USE_AZUREAD: "true"   # Required: provider has storage_use_azuread = true
   SERVICE_CONNECTION: connectivity_connection   # Change to match your ADO service connection name
@@ -90,13 +89,22 @@ stages:
               addSpnToEnvironment: true
               workingDirectory: $(TF_DIR)
               inlineScript: |
+                # Pull secrets from Key Vault
+                CONNECTIVITY_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name connectivity-subscription-id --query value -o tsv)
+                MANAGEMENT_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name management-subscription-id --query value -o tsv)
+                TENANT_ID=$(az keyvault secret show --vault-name $(KV_NAME) --name tenant-id --query value -o tsv)
+
                 # Map WIF-injected vars to what the AzureRM provider expects
                 export ARM_CLIENT_ID=$servicePrincipalId
                 export ARM_OIDC_TOKEN=$idToken
                 export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID="$CONNECTIVITY_SUB"
+                export TF_VAR_connectivity_subscription_id="$CONNECTIVITY_SUB"
+                export TF_VAR_management_subscription_id="$MANAGEMENT_SUB"
+                export TF_VAR_tenant_id="$TENANT_ID"
 
                 terraform init -reconfigure \
-                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="subscription_id=$MANAGEMENT_SUB" \
                   -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
                   -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
                   -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \
@@ -160,12 +168,21 @@ stages:
               addSpnToEnvironment: true
               workingDirectory: $(TF_DIR)
               inlineScript: |
+                # Pull secrets from Key Vault
+                CONNECTIVITY_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name connectivity-subscription-id --query value -o tsv)
+                MANAGEMENT_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name management-subscription-id --query value -o tsv)
+                TENANT_ID=$(az keyvault secret show --vault-name $(KV_NAME) --name tenant-id --query value -o tsv)
+
                 export ARM_CLIENT_ID=$servicePrincipalId
                 export ARM_OIDC_TOKEN=$idToken
                 export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID="$CONNECTIVITY_SUB"
+                export TF_VAR_connectivity_subscription_id="$CONNECTIVITY_SUB"
+                export TF_VAR_management_subscription_id="$MANAGEMENT_SUB"
+                export TF_VAR_tenant_id="$TENANT_ID"
 
                 terraform init -reconfigure \
-                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="subscription_id=$MANAGEMENT_SUB" \
                   -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
                   -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
                   -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \
@@ -217,12 +234,21 @@ stages:
               addSpnToEnvironment: true
               workingDirectory: $(TF_DIR)
               inlineScript: |
+                # Pull secrets from Key Vault
+                CONNECTIVITY_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name connectivity-subscription-id --query value -o tsv)
+                MANAGEMENT_SUB=$(az keyvault secret show --vault-name $(KV_NAME) --name management-subscription-id --query value -o tsv)
+                TENANT_ID=$(az keyvault secret show --vault-name $(KV_NAME) --name tenant-id --query value -o tsv)
+
                 export ARM_CLIENT_ID=$servicePrincipalId
                 export ARM_OIDC_TOKEN=$idToken
                 export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID="$CONNECTIVITY_SUB"
+                export TF_VAR_connectivity_subscription_id="$CONNECTIVITY_SUB"
+                export TF_VAR_management_subscription_id="$MANAGEMENT_SUB"
+                export TF_VAR_tenant_id="$TENANT_ID"
 
                 terraform init -reconfigure \
-                  -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                  -backend-config="subscription_id=$MANAGEMENT_SUB" \
                   -backend-config="resource_group_name=$(BACKEND_RESOURCE_GROUP)" \
                   -backend-config="storage_account_name=$(BACKEND_STORAGE_ACCOUNT)" \
                   -backend-config="container_name=$(BACKEND_STORAGE_CONTAINER)" \

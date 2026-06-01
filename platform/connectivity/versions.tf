@@ -11,7 +11,7 @@ terraform {
 
 provider "azurerm" {
   storage_use_azuread = true
-  subscription_id     = var.subscription_id
+  subscription_id     = var.connectivity_subscription_id
   features {
     resource_group {
       # Allow destroy even when the RG contains resources not tracked by Terraform

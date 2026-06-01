@@ -9,7 +9,7 @@ locals {
   }
 }
 
-variable "subscription_id" {
+variable "connectivity_subscription_id" {
   description = "subscription id for resource groups and resources"
   type        = string
 }
