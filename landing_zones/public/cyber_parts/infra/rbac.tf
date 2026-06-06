@@ -57,6 +57,34 @@ resource "azurerm_role_assignment" "search_to_openai" {
 }
 
 ############################################
+# RBAC — Docs storage: groups and users
+############################################
+
+data "azuread_group" "docs_storage_groups" {
+  for_each     = var.docs_storage_rbac_groups
+  display_name = each.value.group_name
+}
+
+data "azuread_user" "docs_storage_users" {
+  for_each            = var.docs_storage_rbac_users
+  user_principal_name = each.value.email
+}
+
+resource "azurerm_role_assignment" "docs_storage_groups" {
+  for_each             = var.docs_storage_rbac_groups
+  scope                = module.docs_storage.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_group.docs_storage_groups[each.key].object_id
+}
+
+resource "azurerm_role_assignment" "docs_storage_users" {
+  for_each             = var.docs_storage_rbac_users
+  scope                = module.docs_storage.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_user.docs_storage_users[each.key].object_id
+}
+
+############################################
 # RBAC — Foundry account: groups and users
 ############################################
 
@@ -83,3 +111,16 @@ resource "azurerm_role_assignment" "foundry_users" {
   role_definition_name = each.value.role_definition_name
   principal_id         = data.azuread_user.foundry_users[each.key].object_id
 }
+
+
+############################################
+# Grant the Foundry system-assigned identity
+# access to the CMK in Key Vault
+############################################
+# resource "azurerm_role_assignment" "foundry_kv_crypto" {
+#   scope                = data.azurerm_key_vault.this.id
+#   role_definition_name = "Key Vault Crypto Service Encryption User"
+#   principal_id         = azurerm_cognitive_account.foundry.id #azurerm_cognitive_account.foundry.identity[0].principal_id
+
+#   provider = azurerm.management
+# }

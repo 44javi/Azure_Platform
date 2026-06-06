@@ -7,3 +7,20 @@ data "azurerm_key_vault" "this" {
 
   provider = azurerm.management
 }
+
+# ############################################
+# # Key Vault Key for CMK
+# ############################################
+# resource "azurerm_key_vault_key" "foundry_cmk" {
+#   name         = "foundry-cmk"
+#   key_vault_id = data.azurerm_key_vault.this.id
+#   key_type     = "RSA"
+#   key_size     = 2048
+
+#   key_opts = [
+#     "unwrapKey",
+#     "wrapKey",
+#   ]
+
+#   provider = azurerm.management
+# }

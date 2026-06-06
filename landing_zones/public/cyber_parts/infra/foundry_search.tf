@@ -16,6 +16,11 @@ resource "azurerm_cognitive_account" "foundry" {
   identity {
     type = "SystemAssigned"
   }
+
+  # customer_managed_key {
+  #   key_vault_key_id   = azurerm_key_vault_key.foundry_cmk.id
+  #   identity_client_id = null # null = use system-assigned identity
+  # }
 }
 
 resource "azurerm_cognitive_deployment" "models" {

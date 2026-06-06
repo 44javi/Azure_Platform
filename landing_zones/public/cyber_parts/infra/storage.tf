@@ -14,7 +14,7 @@ resource "azurerm_application_insights" "this" {
 # Storage Account — source documents for AI Search indexer
 ############################################
 module "docs_storage" {
-  source              = "../../../../modules/storage"
+  source = "../../../../modules/storage"
 
   resource_group_name = azurerm_resource_group.main.name
   resource_group_id   = azurerm_resource_group.main.id
@@ -40,6 +40,7 @@ module "docs_storage" {
   pe_subresource_names            = ["blob"]
   private_dns_zone_ids            = [data.azurerm_private_dns_zone.blob.id]
   create_private_endpoint         = true
+
 }
 
 resource "azurerm_private_endpoint" "st" {

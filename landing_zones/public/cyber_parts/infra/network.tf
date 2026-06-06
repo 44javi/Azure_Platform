@@ -145,7 +145,7 @@ resource "azurerm_virtual_network_peering" "spoke_to_hub" {
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
   # Must be true when the hub has a VPN or ExpressRoute gateway (var.enable_vpn = true)
-  use_remote_gateways          = var.enable_vpn
+  use_remote_gateways = var.enable_vpn
 }
 
 resource "azurerm_virtual_network_peering" "hub_to_spoke" {
@@ -157,7 +157,7 @@ resource "azurerm_virtual_network_peering" "hub_to_spoke" {
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
   # Must be true when the hub has a VPN or ExpressRoute gateway (var.enable_vpn = true)
-  allow_gateway_transit        = var.enable_vpn
+  allow_gateway_transit = var.enable_vpn
 }
 
 # --------------------------------------------------------------------------

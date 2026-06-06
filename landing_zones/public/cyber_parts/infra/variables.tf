@@ -203,3 +203,21 @@ variable "replication" {
   type        = string
   default     = "LRS"
 }
+
+variable "docs_storage_rbac_groups" {
+  description = "Map of Entra ID groups to assign roles on the docs storage account"
+  type = map(object({
+    group_name           = string
+    role_definition_name = string
+  }))
+  default = {}
+}
+
+variable "docs_storage_rbac_users" {
+  description = "Map of users (by UPN/email) to assign roles on the docs storage account"
+  type = map(object({
+    email                = string
+    role_definition_name = string
+  }))
+  default = {}
+}
