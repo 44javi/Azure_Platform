@@ -54,7 +54,7 @@ variables:
   BACKEND_KEY: connectivity-prod
   ARM_USE_OIDC: "true"
   ARM_USE_AZUREAD: "true"   # Required: provider has storage_use_azuread = true
-  SERVICE_CONNECTION: connectivity_connection   # Change to match your ADO service connection name
+  SERVICE_CONNECTION: connectivity_connection   # Change to match ADO service connection name
 
 pool:
   vmImage: ubuntu-latest
@@ -161,7 +161,7 @@ stages:
               targetPath: $(TF_DIR)
 
           - task: AzureCLI@2
-            displayName: Terraform Init & Apply
+            displayName: Terraform Apply
             inputs:
               azureSubscription: $(SERVICE_CONNECTION)
               scriptType: bash
@@ -227,7 +227,7 @@ stages:
               targetPath: $(TF_DIR)
 
           - task: AzureCLI@2
-            displayName: Terraform Init & Destroy
+            displayName: Destroy
             inputs:
               azureSubscription: $(SERVICE_CONNECTION)
               scriptType: bash
