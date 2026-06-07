@@ -37,6 +37,75 @@
 #   principal_id         = azurerm_windows_web_app.this.identity[0].principal_id
 # }
 
+
+############################################
+# RBAC — Foundry account: groups and users
+############################################
+
+data "azuread_group" "foundry_groups" {
+  for_each     = var.foundry_rbac_groups
+  display_name = each.value.group_name
+}
+
+data "azuread_user" "foundry_users" {
+  for_each            = var.foundry_rbac_users
+  user_principal_name = each.value.email
+}
+
+resource "azurerm_role_assignment" "foundry_groups" {
+  for_each             = var.foundry_rbac_groups
+  scope                = azurerm_cognitive_account.foundry.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_group.foundry_groups[each.key].object_id
+}
+
+resource "azurerm_role_assignment" "foundry_users" {
+  for_each             = var.foundry_rbac_users
+  scope                = azurerm_cognitive_account.foundry.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_user.foundry_users[each.key].object_id
+}
+
+############################################
+# Grant the Foundry system-assigned identity
+# access to the CMK in Key Vault
+############################################
+# resource "azurerm_role_assignment" "foundry_kv_crypto" {
+#   scope                = data.azurerm_key_vault.this.id
+#   role_definition_name = "Key Vault Crypto Service Encryption User"
+#   principal_id         = azurerm_cognitive_account.foundry.id #azurerm_cognitive_account.foundry.identity[0].principal_id
+
+#   provider = azurerm.management
+# }
+
+############################################
+# RBAC — AI Search: groups and users
+############################################
+
+data "azuread_group" "search_groups" {
+  for_each     = var.search_rbac_groups
+  display_name = each.value.group_name
+}
+
+data "azuread_user" "search_users" {
+  for_each            = var.search_rbac_users
+  user_principal_name = each.value.email
+}
+
+resource "azurerm_role_assignment" "search_groups" {
+  for_each             = var.search_rbac_groups
+  scope                = azurerm_search_service.this.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_group.search_groups[each.key].object_id
+}
+
+resource "azurerm_role_assignment" "search_users" {
+  for_each             = var.search_rbac_users
+  scope                = azurerm_search_service.this.id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = data.azuread_user.search_users[each.key].object_id
+}
+
 ############################################
 # RBAC — AI Search system identity to backend services
 # So the indexer can pull from Storage and call OpenAI for embeddings
@@ -84,43 +153,4 @@ resource "azurerm_role_assignment" "docs_storage_users" {
   principal_id         = data.azuread_user.docs_storage_users[each.key].object_id
 }
 
-############################################
-# RBAC — Foundry account: groups and users
-############################################
 
-data "azuread_group" "foundry_groups" {
-  for_each     = var.foundry_rbac_groups
-  display_name = each.value.group_name
-}
-
-data "azuread_user" "foundry_users" {
-  for_each            = var.foundry_rbac_users
-  user_principal_name = each.value.email
-}
-
-resource "azurerm_role_assignment" "foundry_groups" {
-  for_each             = var.foundry_rbac_groups
-  scope                = azurerm_cognitive_account.foundry.id
-  role_definition_name = each.value.role_definition_name
-  principal_id         = data.azuread_group.foundry_groups[each.key].object_id
-}
-
-resource "azurerm_role_assignment" "foundry_users" {
-  for_each             = var.foundry_rbac_users
-  scope                = azurerm_cognitive_account.foundry.id
-  role_definition_name = each.value.role_definition_name
-  principal_id         = data.azuread_user.foundry_users[each.key].object_id
-}
-
-
-############################################
-# Grant the Foundry system-assigned identity
-# access to the CMK in Key Vault
-############################################
-# resource "azurerm_role_assignment" "foundry_kv_crypto" {
-#   scope                = data.azurerm_key_vault.this.id
-#   role_definition_name = "Key Vault Crypto Service Encryption User"
-#   principal_id         = azurerm_cognitive_account.foundry.id #azurerm_cognitive_account.foundry.identity[0].principal_id
-
-#   provider = azurerm.management
-# }
