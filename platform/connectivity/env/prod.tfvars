@@ -1,5 +1,5 @@
 # Resource Naming
-project      = "connectivity"
+project      = "connectivity-hub"
 environment = "prod"
 
 region = "westus3"
