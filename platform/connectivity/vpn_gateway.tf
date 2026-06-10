@@ -20,6 +20,7 @@ resource "azurerm_public_ip" "vpn_gateway" {
   location            = var.region
   allocation_method   = "Static"
   sku                 = "Standard"
+  zones               = ["1", "2", "3"]
   tags                = local.default_tags
 }
 
