@@ -2,7 +2,7 @@
 project      = "connectivity"
 environment = "prod"
 
-region = "northcentralus"
+region = "westus3"
 
 alert_email = ""
 
@@ -14,14 +14,14 @@ vnet_address_space = ["10.79.0.0/16"]
 
 # Private DNS zones — add a new line here to create a zone; spokes look them up via data source
 private_dns_zones = [
-  "privatelink.services.ai.azure.com",
-  "privatelink.openai.azure.com",
-  "privatelink.cognitiveservices.azure.com",
-  "privatelink.search.windows.net",
-  "privatelink.blob.core.windows.net",
+  "privatelink.services.ai.azure.com", # Foundry account
+  "privatelink.openai.azure.com", # Foundry account
+  "privatelink.cognitiveservices.azure.com", # Foundry account
+  "privatelink.search.windows.net", # Search service
+  "privatelink.blob.core.windows.net", # blob storage
   "privatelink.vaultcore.azure.net",
   "privatelink.azurewebsites.net",
-  # "privatelink.documents.azure.com",  # Cosmos DB
+  "privatelink.documents.azure.com",  # Cosmos DB
   "privatelink.api.azureml.ms",
   "privatelink.notebooks.azure.net"
 ]
