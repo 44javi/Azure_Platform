@@ -47,3 +47,16 @@ resource "azurerm_search_shared_private_link_service" "storage" {
   target_resource_id = module.docs_storage.id
   request_message    = "AI Search to Storage for indexer"
 }
+
+# Shared private link: lets Search reach the Foundry model endpoint privately.
+# Required because the Foundry account has public_network_access_enabled = false;
+# without this, knowledge-base agentic retrieval (and the embedding skillset)
+# can't reach https://foundry-...openai.azure.com and fail with 502 BadGateway
+# "Could not reach the model endpoint". Resolves via privatelink.openai.azure.com.
+resource "azurerm_search_shared_private_link_service" "foundry" {
+  name               = "spl-foundry-${var.project}-${var.environment}"
+  search_service_id  = azurerm_search_service.this.id
+  subresource_name   = "openai_account"
+  target_resource_id = azurerm_cognitive_account.foundry.id
+  request_message    = "AI Search to Foundry for retrieval/embeddings"
+}

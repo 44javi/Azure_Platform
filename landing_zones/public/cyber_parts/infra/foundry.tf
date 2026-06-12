@@ -1,13 +1,13 @@
-############################################
-# Azure AI Foundry (Cognitive Services account, kind=AIServices)
-############################################
+# ############################################
+# # Azure AI Foundry (Cognitive Services account, kind=AIServices)
+# ############################################
 resource "azurerm_cognitive_account" "foundry" {
   name                          = "foundry-${var.project}-${var.environment}"
   resource_group_name           = azurerm_resource_group.main.name
   location                      = var.region
   kind                          = "AIServices"
   sku_name                      = "S0"
-  custom_subdomain_name         = "dns-foundry-${var.project}-${var.environment}"
+  custom_subdomain_name         = "cdn-foundry-${var.project}-${var.environment}"
   project_management_enabled    = true
   public_network_access_enabled = false
   local_auth_enabled            = false # AAD only
@@ -17,16 +17,23 @@ resource "azurerm_cognitive_account" "foundry" {
     type = "SystemAssigned"
   }
 
+  # Injects the agent runtime into our VNet so it can resolve the private
+  # endpoints for Search/Storage/Cosmos DB. Must be set at account creation —
+  # azurerm/Azure don't support adding this to an existing account.
+  network_injection {
+    scenario  = "agent"
+    subnet_id = azurerm_subnet.spoke["agentsegress"].id
+  }
+
   # customer_managed_key {
   #   key_vault_key_id   = azurerm_key_vault_key.foundry_cmk.id
   #   identity_client_id = null # null = use system-assigned identity
   # }
 }
 
-############################################
-# Azure AI Foundry Project
-# Child of the AI Services account — no Hub required.
-############################################
+###########################################
+# Azure AI Foundry Project 
+###########################################
 resource "azurerm_cognitive_account_project" "this" {
   name                 = "proj-${var.project}-${var.environment}"
   cognitive_account_id = azurerm_cognitive_account.foundry.id

@@ -37,7 +37,7 @@ locals {
     blob        = "privatelink.blob.core.windows.net"
     key_vault   = "privatelink.vaultcore.azure.net"
     app_service = "privatelink.azurewebsites.net"
-    # cosmos_db = "privatelink.documents.azure.com"  # Cosmos DB
+    cosmos_db   = "privatelink.documents.azure.com"
   }
 }
 
@@ -208,6 +208,12 @@ data "azurerm_private_dns_zone" "search" {
 data "azurerm_private_dns_zone" "blob" {
   provider            = azurerm.connectivity
   name                = "privatelink.blob.core.windows.net"
+  resource_group_name = var.hub_vnet_resource_group_name
+}
+
+data "azurerm_private_dns_zone" "cosmos" {
+  provider            = azurerm.connectivity
+  name                = "privatelink.documents.azure.com"
   resource_group_name = var.hub_vnet_resource_group_name
 }
 

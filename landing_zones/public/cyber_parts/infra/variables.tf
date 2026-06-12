@@ -132,9 +132,9 @@ variable "openai_model_deployments" {
     sku_capacity  = number
   }))
   default = {
-    chat = {
-      model_name    = "gpt-4o-mini"
-      model_version = "2024-07-18"
+    agent = {
+      model_name    = "gpt-4.1"
+      model_version = "2025-04-14"
       sku_name      = "GlobalStandard"
       sku_capacity  = 50
     }

@@ -43,24 +43,24 @@ module "docs_storage" {
 
 }
 
-resource "azurerm_private_endpoint" "st" {
-  name                = "pe-st-cyberparts-${var.environment}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.region
-  subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
-  tags                = local.default_tags
+# resource "azurerm_private_endpoint" "st" {
+#   name                = "pe-st-cyberparts-${var.environment}"
+#   resource_group_name = azurerm_resource_group.main.name
+#   location            = var.region
+#   subnet_id           = azurerm_subnet.spoke["privateendpoints"].id
+#   tags                = local.default_tags
 
-  private_service_connection {
-    name                           = "stconnection"
-    private_connection_resource_id = module.docs_storage.id
-    subresource_names              = ["blob"]
-    is_manual_connection           = false
-  }
+#   private_service_connection {
+#     name                           = "stconnection"
+#     private_connection_resource_id = module.docs_storage.id
+#     subresource_names              = ["blob"]
+#     is_manual_connection           = false
+#   }
 
-  private_dns_zone_group {
-    name                 = "storage-dns"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.blob.id]
-  }
-}
+#   private_dns_zone_group {
+#     name                 = "storage-dns"
+#     private_dns_zone_ids = [data.azurerm_private_dns_zone.blob.id]
+#   }
+# }
 
 data "azurerm_client_config" "current" {}

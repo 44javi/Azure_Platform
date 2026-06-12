@@ -4,11 +4,15 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.72.0"
+      version = "~> 4.76.0"
     }
     azuread = {
       source  = "hashicorp/azuread"
       version = "~> 3.8.0"
+    }
+    azapi = {
+      source  = "Azure/azapi"
+      version = "2.10.0"
     }
   }
 }
@@ -20,6 +24,10 @@ provider "azurerm" {
     resource_group {
       # Allow destroy even when the RG contains resources not tracked by Terraform
       prevent_deletion_if_contains_resources = false
+    }
+    cognitive_account {
+      # Skip soft-delete on destroy so the name is immediately reusable on the next apply
+      purge_soft_delete_on_destroy = true
     }
   }
 }
@@ -37,5 +45,9 @@ provider "azurerm" {
 }
 
 provider "azuread" {
+  # Configuration options
+}
+
+provider "azapi" {
   # Configuration options
 }
