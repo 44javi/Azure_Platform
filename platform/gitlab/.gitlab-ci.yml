@@ -1,0 +1,112 @@
+# GitLab CI — GitLab Org Structure (Terraform, gitlabhq/gitlab provider)
+#
+# Manages the GitLab group hierarchy, SAML group links, and group CI/CD
+# variables. Terraform state lives in the Azure management storage account
+# (same backend as the rest of the platform).
+#
+# Authentication:
+#   GitLab provider -> GITLAB_TOKEN, a masked/protected CI/CD variable
+#                      (group access token on the top-level group, `api` scope).
+#   State backend   -> Azure OIDC. GitLab mints AZURE_OIDC_TOKEN via id_tokens
+#                      and Terraform exchanges it (ARM_USE_OIDC + ARM_OIDC_TOKEN).
+#                      No Azure secret is stored.
+#
+# Required CI/CD variables (Settings > CI/CD > Variables; set at the group so
+# they inherit, or on this project):
+#   GITLAB_TOKEN             masked, protected
+#   ARM_CLIENT_ID            app registration (client) id of the state SP
+#   ARM_TENANT_ID            Entra ID tenant id
+#   BACKEND_SUBSCRIPTION_ID  management subscription id (state account lives here)
+#   BACKEND_RESOURCE_GROUP   resource group containing the state account
+#   BACKEND_STORAGE_ACCOUNT  storage account used for Terraform state
+#   BACKEND_STORAGE_CONTAINER container used for Terraform state
+#
+# Azure prerequisite: add a federated credential on ARM_CLIENT_ID that trusts
+#   issuer  https://gitlab.com
+#   subject project_path:<group>/<project>:ref_type:branch:ref:main
+# and grant that SP Storage Blob Data Contributor on the state storage account.
+#
+# This file is not at the repo root. Point the project's CI/CD configuration
+# file at it: Settings > CI/CD > General pipelines >
+#   CI/CD configuration file = platform/gitlab/.gitlab-ci.yml
+# (or `include:` it from a root .gitlab-ci.yml).
+
+stages:
+  - validate
+  - plan
+  - apply
+  - destroy
+
+default:
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  # GitLab issues this JWT to the job; Azure trusts it via the federated
+  # credential. aud must match the credential's audience.
+  id_tokens:
+    AZURE_OIDC_TOKEN:
+      aud: api://AzureADTokenExchange
+
+variables:
+  TF_DIR: platform/gitlab
+  TFVARS: env/global.tfvars
+  BACKEND_KEY: gitlab-global
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+
+# Shared init: feed GitLab's OIDC token to the azurerm backend, then init.
+.tf_setup: &tf_setup
+  - cd "$TF_DIR"
+  - export ARM_OIDC_TOKEN="$AZURE_OIDC_TOKEN"
+  - export ARM_SUBSCRIPTION_ID="$BACKEND_SUBSCRIPTION_ID"
+  - terraform init -reconfigure -backend-config="subscription_id=$BACKEND_SUBSCRIPTION_ID" -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" -backend-config="container_name=$BACKEND_STORAGE_CONTAINER" -backend-config="key=$BACKEND_KEY"
+
+# fmt + validate. No backend or API access needed, so no token required.
+validate:
+  stage: validate
+  script:
+    - cd "$TF_DIR"
+    - terraform fmt -check -recursive
+    - terraform init -backend=false
+    - terraform validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Plan on MRs and on main. Saves the plan so apply uses exactly what was shown.
+plan:
+  stage: plan
+  before_script: *tf_setup
+  script:
+    - terraform plan -var-file="$TFVARS" -out=tfplan
+  artifacts:
+    paths:
+      - $TF_DIR/tfplan
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Apply on main, gated by a manual click (acts as the approval gate).
+apply:
+  stage: apply
+  before_script: *tf_setup
+  script:
+    - terraform apply -auto-approve tfplan
+  needs:
+    - job: plan
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: false
+
+# Destroy on main, manual only. Re-plans destroy at run time.
+destroy:
+  stage: destroy
+  before_script: *tf_setup
+  script:
+    - terraform destroy -auto-approve -var-file="$TFVARS"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
