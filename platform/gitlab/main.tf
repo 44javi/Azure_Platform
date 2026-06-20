@@ -21,7 +21,7 @@ resource "gitlab_group" "department" {
 # Membership comes from the IdP (SAML/SCIM); this only defines what the mapped
 # group can do. Do not also add direct members here or they will fight on drift.
 resource "gitlab_group_saml_link" "department" {
-  for_each = local.department_saml_links
+  for_each = var.enable_saml_group_links ? local.department_saml_links : {}
 
   group           = gitlab_group.department[each.value.dept_key].id
   access_level    = each.value.access_level
@@ -31,7 +31,7 @@ resource "gitlab_group_saml_link" "department" {
 # Top-level SAML links (platform admins, read-only security audit). Attached to
 # the top-level group so the grant inherits into every department subgroup.
 resource "gitlab_group_saml_link" "top_level" {
-  for_each = var.top_level_saml_links
+  for_each = var.enable_saml_group_links ? var.top_level_saml_links : {}
 
   group           = data.gitlab_group.top.id
   access_level    = each.value.access_level

@@ -1,5 +1,5 @@
 terraform {
-  backend "azurerm" {} # Settings come from backend.hcl
+  backend "azurerm" {} 
 
   required_providers {
     azurerm = {

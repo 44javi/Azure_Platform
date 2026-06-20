@@ -87,6 +87,12 @@ variable "top_level_saml_links" {
   }
 }
 
+variable "enable_saml_group_links" {
+  description = "Whether to manage GitLab SAML Group Links. Requires GitLab Premium/Ultimate and SAML SSO enabled on the top-level group. Keep false for Free-tier testing, then set true for licensed environments."
+  type        = bool
+  default     = false
+}
+
 # =============================================================================
 # Group settings
 # =============================================================================

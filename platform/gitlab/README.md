@@ -16,7 +16,9 @@ organization without code changes.
   manage the resources in this module. Never commit it.
 - **SAML SSO** configured on the top-level group, and the IdP set to emit group
   **names** (not object-id GUIDs) in the SAML groups claim. The `saml_group_name`
-  values this module creates must match what the IdP sends.
+  values this module creates must match what the IdP sends. SAML Group Links
+  require GitLab Premium/Ultimate. Keep `enable_saml_group_links = false` for
+  Free-tier testing, then set it to `true` in licensed environments.
 - Azure access to the **management storage account** for Terraform state
   (`az login` locally; OIDC federated credential in CI).
 - Terraform >= 1.5. The `gitlabhq/gitlab` provider major is pinned in
@@ -117,7 +119,7 @@ mapped group can do; do not also add direct members or they fight on drift.
 
 SAML SSO is configured once on the GitLab.com top-level group. SAML Group Links
 can then be attached to the top-level group or to department subgroups by this
-Terraform module.
+Terraform module when `enable_saml_group_links = true`.
 
 1. In GitLab, open the top-level group and go to **Settings > SAML SSO**.
    Record these GitLab service provider values:
@@ -192,7 +194,8 @@ Terraform module.
    enable SAML authentication for the group, and save. Test SAML sign-in before
    enforcing SSO-only authentication.
 
-9. Run Terraform after SAML SSO is enabled. The
+9. Set `enable_saml_group_links = true` and run Terraform after SAML SSO is
+   enabled. The
    `gitlab_group_saml_link` resources create the SAML Group Links that map Entra
    groups to GitLab roles.
 
@@ -317,7 +320,10 @@ chmod +x ./.debug.global.sh
 `.debug.global.sh` sets the backend key (`gitlab-global`) and runs against
 `env/global.tfvars`. Before planning, set `company_abbr` and
 `top_level_group_path` in `env/global.tfvars` to the target organization and
-the exact existing GitLab top-level group URL path.
+the exact existing GitLab top-level group URL path. For Free-tier testing, leave
+`enable_saml_group_links` unset or set it to `false` so Terraform creates the
+group hierarchy without calling Premium-only SAML Group Link APIs. In licensed
+environments with SAML SSO enabled, set `enable_saml_group_links = true`.
 
 ### CI (GitLab)
 
@@ -352,7 +358,10 @@ expected `{COMPANY}-{SYSTEM}-{DOMAIN}-{ROLE}` names.
   `GITLAB_TOKEN` lacks access to it. Confirm the token's bot/service account is
   a direct member of the top-level group. The path is the group's URL slug.
 - **401/403 from the provider.** `GITLAB_TOKEN` missing, expired, or wrong
-  scope (needs `api`). Group access tokens expire; rotate before expiry.
+  scope (needs `api`). For `gitlab_group_saml_link`, also confirm
+  `enable_saml_group_links = true` is used only when the top-level group has
+  GitLab Premium/Ultimate, SAML SSO is enabled, and the token principal can
+  manage SAML Group Links. Group access tokens expire; rotate before expiry.
 - **Backend auth fails in CI.** The federated credential subject must match
   the running ref (`project_path:<group>/<project>:ref_type:branch:ref:main`),
   and the SP needs Storage Blob Data Contributor on the state account.

@@ -17,3 +17,8 @@ output "required_entra_groups" {
   description = "Entra ID security group display names that must exist and be emitted in the SAML groups claim for access to work. Create these in your IdP (or via the azuread provider)."
   value       = local.expected_entra_groups
 }
+
+output "saml_group_links_enabled" {
+  description = "Whether this run manages GitLab SAML Group Links."
+  value       = var.enable_saml_group_links
+}
