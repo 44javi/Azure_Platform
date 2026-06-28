@@ -74,8 +74,8 @@ resource "azurerm_policy_definition" "rg_created_date" {
 }
 
 resource "azurerm_subscription_policy_assignment" "rg_created_date" {
-  name                 = "stamp-rg-created-date"
-  display_name         = "Stamp ${local.created_tag} tag on resource groups"
+  name                 = "Tag-rg-created-date"
+  display_name         = "Tag ${local.created_tag} on resource groups"
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = azurerm_policy_definition.rg_created_date.id
   location             = var.region

@@ -49,7 +49,6 @@ resource "azurerm_search_shared_private_link_service" "storage" {
 }
 
 # Shared private link: lets Search reach the Foundry model endpoint privately.
-# Required because the Foundry account has public_network_access_enabled = false;
 # without this, knowledge-base agentic retrieval (and the embedding skillset)
 # can't reach https://foundry-...openai.azure.com and fail with 502 BadGateway
 # "Could not reach the model endpoint". Resolves via privatelink.openai.azure.com.

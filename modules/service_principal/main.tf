@@ -125,6 +125,19 @@ resource "azurerm_key_vault_secret" "sp_secret" {
   }
 }
 
+# --- Federated identity credential path ---
+
+resource "azuread_application_federated_identity_credential" "this" {
+  for_each = var.credential_type == "federated" ? var.federated_identity_credentials : {}
+
+  application_id = azuread_application.this.id
+  display_name   = coalesce(each.value.display_name, each.key)
+  description    = each.value.description
+  audiences      = each.value.audiences
+  issuer         = each.value.issuer
+  subject        = each.value.subject
+}
+
 # Create role assignments for the service principal
 resource "azurerm_role_assignment" "sp_roles" {
   for_each = var.role_assignments

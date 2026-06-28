@@ -1,6 +1,9 @@
 # Local .terraform directories
 **/.terraform/*
-.debug.prod.sh
+
+# Python virtualenvs (e.g. cyber_parts agent tooling)
+**/.venv/
+**/.debug.*.sh
 **/.terraform.lock.hcl
 
 

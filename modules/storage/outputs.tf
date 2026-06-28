@@ -10,6 +10,11 @@ output "name" {
   value       = azurerm_storage_account.adls.name
 }
 
+output "primary_blob_endpoint" {
+  description = "Primary blob service endpoint (https://<account>.blob.core.windows.net/)"
+  value       = azurerm_storage_account.adls.primary_blob_endpoint
+}
+
 # output "datalake_name" {
 #   description = "The name of the Azure Data Lake Storage account"
 #   value       = azurerm_storage_account.adls.name

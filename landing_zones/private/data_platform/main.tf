@@ -79,8 +79,8 @@ module "dbx_resources" {
   resource_group_name = azurerm_resource_group.main.name
   resource_group_id   = azurerm_resource_group.main.id
   region              = var.region
-  datalake_name       = module.storage.datalake_name
-  datalake_id         = module.storage.datalake_id
+  datalake_name       = module.storage.name
+  datalake_id         = module.storage.id
   containers          = var.containers
   schemas             = var.schemas
   workspace_id        = module.dbx_workspace.workspace_id
@@ -103,4 +103,29 @@ module "sat_sp" {
   environment         = var.environment
   resource_group_name = azurerm_resource_group.main.name
   key_vault_id        = data.azurerm_key_vault.management.id
+}
+
+module "gitlab_cleanup_sp" {
+  source = "../../../modules/service_principal"
+
+  project             = "cleanup"
+  environment         = var.environment
+  resource_group_name = azurerm_resource_group.main.name
+  credential_type     = "federated"
+
+  federated_identity_credentials = {
+    gitlab_main = {
+      display_name = "gitlab-main"
+      issuer       = "https://gitlab.com"
+      subject      = "project_path:cybernetic-nimbus-group/cloud/cyber-parts:ref_type:branch:ref:main"
+      audiences    = ["api://AzureADTokenExchange"]
+    }
+  }
+
+  role_assignments = {
+    subscription_contributor = {
+      scope                = "/subscriptions/${var.subscription_id}"
+      role_definition_name = "Contributor"
+    }
+  }
 }

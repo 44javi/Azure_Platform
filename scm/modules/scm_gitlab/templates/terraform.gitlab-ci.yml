@@ -1,0 +1,46 @@
+# Starter Terraform pipeline (seeded once, then owned by the project team).
+# Authenticates to Azure with workload identity federation (OIDC)
+# are stored. ARM_TENANT_ID / ARM_SUBSCRIPTION_ID / ARM_USE_OIDC come from
+# group-level CI/CD variables defined in the SCM Terraform.
+stages:
+  - validate
+  - plan
+  - apply
+
+default:
+  image: hashicorp/terraform:latest
+  before_script:
+    - terraform --version
+    - terraform init
+
+variables:
+  ARM_USE_OIDC: "true"
+
+validate:
+  stage: validate
+  script:
+    - terraform fmt -check -recursive
+    - terraform validate
+
+plan:
+  stage: plan
+  id_tokens:
+    ARM_OIDC_TOKEN:
+      aud: api://AzureADTokenExchange
+  script:
+    - terraform plan -out=plan.tfplan
+  artifacts:
+    paths:
+      - plan.tfplan
+    expire_in: 1 day
+
+apply:
+  stage: apply
+  id_tokens:
+    ARM_OIDC_TOKEN:
+      aud: api://AzureADTokenExchange
+  script:
+    - terraform apply -input=false plan.tfplan
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual

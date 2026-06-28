@@ -1,0 +1,39 @@
+# GitLab CI - lab subscription TTL cleanup.
+#
+# This pipeline intentionally deletes Azure resources outside Terraform state.
+# It is for lab subscriptions where resources older than the configured TTL
+# should be removed automatically.
+#
+# Required CI/CD variables:
+#   ARM_CLIENT_ID        App registration client ID trusted by GitLab OIDC.
+#   ARM_TENANT_ID        Entra ID tenant ID.
+#   LAB_SUBSCRIPTION_ID  Azure subscription ID to clean.
+#
+# Optional schedule variables:
+#   TTL_DAYS                 Default: 90.
+#   TTL_HOURS                Overrides TTL_DAYS for short test windows.
+
+stages:
+  - cleanup
+
+lab_ttl_cleanup:
+  stage: cleanup
+  image: mcr.microsoft.com/azure-cli:latest
+  id_tokens:
+    AZURE_OIDC_TOKEN:
+      aud: api://AzureADTokenExchange
+  variables:
+    TTL_DAYS: "90"
+  before_script:
+    - command -v jq >/dev/null || (tdnf install -y jq || apk add --no-cache jq || (apt-get update && apt-get install -y jq))
+    - test -n "$ARM_CLIENT_ID"
+    - test -n "$ARM_TENANT_ID"
+    - test -n "$LAB_SUBSCRIPTION_ID"
+    - az login --service-principal --tenant "$ARM_TENANT_ID" --username "$ARM_CLIENT_ID" --federated-token "$AZURE_OIDC_TOKEN" --allow-no-subscriptions --only-show-errors
+    - export SUBSCRIPTION_ID="$LAB_SUBSCRIPTION_ID"
+  script:
+    - ./cleanup.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never

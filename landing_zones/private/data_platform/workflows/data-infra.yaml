@@ -1,0 +1,384 @@
+# ==============================================================================
+# Azure DevOps Pipeline: Data Platform Infrastructure (Terraform)
+# ==============================================================================
+#
+# TRIGGER — what event starts this pipeline?
+#
+#   Option A: CI trigger on branch (recommended) ← this file uses this
+#             Fires automatically when a commit lands on 'main', which is
+#             exactly what happens when a PR is approved and merged.
+#
+#   Option B: Schedule — runs on a cron regardless of commits
+#             schedules:
+#               - cron: "0 2 * * 1-5"   # 2 AM UTC weekdays
+#                 branches:
+#                   include: [main]
+#
+#   Option C: Manual only — set trigger: none and run from the ADO UI
+#
+# 'pr: none' means this pipeline does NOT run on a PR itself (pre-merge).
+# It only fires after the PR is merged and the commit lands on main.
+# ------------------------------------------------------------------------------
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - landing_zones/private/data_platform/**
+
+pr: none
+
+# ==============================================================================
+# VARIABLE GROUPS
+# ------------------------------------------------------------------------------
+# All values — including subscription IDs — live in ADO Library groups so
+# nothing environment-specific or sensitive ever appears in this YAML file.
+#
+# Create these three groups in: Pipelines > Library > + Variable group
+# Mark secret values with the lock icon so they are masked in all logs.
+#
+# Variable group type:
+#   Option A: Azure DevOps variable group (recommended) ← used here
+#             Built into ADO, no extra setup required.
+#   Option B: Key Vault linked group — ADO fetches values from AKV at runtime.
+#             Best if your org already centralises secrets in Key Vault.
+#             Set up in: Library > + Variable group > Link secrets from AKV
+#
+# ------------------------------------------------------------------------------
+# Group: "global-vars"  (shared across all environments and workloads)
+#   TF_VERSION        e.g. "1.11.0"
+#   TF_WORKING_DIR    e.g. "landing_zones/private/data_platform"
+#   PROJECT           e.g. "data-platform"
+#
+# Group: "management-vars-prod"  (management subscription / backend config)
+#   BACKEND_SUBSCRIPTION_ID   Management subscription ID (hosts tfstate storage)
+#   BACKEND_RG                e.g. "rg-state-prod"
+#   BACKEND_SA                e.g. "stmanagementstateprodw"
+#   BACKEND_CONTAINER         e.g. "management-state-prod"
+#
+# Group: "data-platform-vars-prod"  (data platform subscription — prod)
+#   ENVIRONMENT               "prod"  (dev → data-platform-vars-dev, etc.)
+#   BACKEND_KEY               "data-platform-prod"  (unique state file per env)
+#   ARM_SUBSCRIPTION_ID       Data platform subscription ID
+#   ARM_CLIENT_ID             Service principal application (client) ID  ← secret
+#   ARM_CLIENT_SECRET         Service principal secret                    ← secret
+#   ARM_TENANT_ID             Azure AD tenant ID                         ← secret
+#   SNYK_TOKEN                Snyk API token                             ← secret
+#
+# In an enterprise setup you would add "data-platform-vars-dev" and
+# "data-platform-vars-qa" groups with their own subscription IDs, state keys,
+# and service principal credentials. The pipeline stages would reference the
+# appropriate group per environment.
+# ==============================================================================
+
+variables:
+  - group: global-vars
+  - group: management-vars-prod
+  - group: data-platform-vars-prod
+
+# ==============================================================================
+# AGENT POOL
+# ------------------------------------------------------------------------------
+# Option A: ubuntu-latest (recommended) ← used throughout this file
+#           Microsoft-hosted; ~1800 free minutes/month for private repos.
+# Option B: windows-latest — only if a job needs Windows-specific tooling.
+# Option C: Self-hosted pool — needed for private VNet access or custom images.
+#           Replace `vmImage: ubuntu-latest` with:
+#             pool:
+#               name: 'MyAgentPool'
+# ==============================================================================
+
+stages:
+
+# ==============================================================================
+# STAGE 1: Security Scan
+# Runs before any Terraform work so a finding blocks the entire pipeline.
+# ==============================================================================
+- stage: SecurityScan
+  displayName: '1 - Security Scan'
+  jobs:
+
+  - job: SnykScan
+    displayName: 'Snyk IaC Scan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - checkout: self
+
+    # --------------------------------------------------------------------------
+    # Snyk scans Terraform files for misconfigurations: open security groups,
+    # missing encryption, overly permissive IAM roles, etc.
+    #
+    # Option A: SnykSecurityScan@1 task (recommended for teams)
+    #           Requires the "Snyk Security" extension from the ADO Marketplace.
+    #           Results appear in the ADO pipeline UI as a rich report.
+    #           - task: SnykSecurityScan@1
+    #             inputs:
+    #               serviceConnectionEndpoint: 'snyk-service-connection'
+    #               testType: 'app'
+    #               failOnIssues: true
+    #               additionalArguments: '--iac --severity-threshold=high'
+    #             env:
+    #               SNYK_TOKEN: $(SNYK_TOKEN)
+    #
+    # Option B: Snyk CLI via npm (recommended for learning) ← used here
+    #           No marketplace extension needed; transparent and portable.
+    #           snyk iac test scans IaC files for misconfigurations.
+    #           --severity-threshold controls the minimum level that fails
+    #           the pipeline (low | medium | high | critical).
+    # --------------------------------------------------------------------------
+    - script: |
+        npm install -g snyk
+        snyk iac test $(TF_WORKING_DIR) \
+          --severity-threshold=high \
+          --report
+      displayName: 'Snyk IaC Scan - Terraform'
+      env:
+        SNYK_TOKEN: $(SNYK_TOKEN)   # From prod-vars variable group (masked in logs)
+
+# ==============================================================================
+# STAGE 2: Validate
+# Format check + configuration validation — no real infra is touched.
+# ==============================================================================
+- stage: Validate
+  displayName: '2 - Validate'
+  dependsOn: SecurityScan
+  condition: succeeded()
+  jobs:
+
+  - job: TerraformValidate
+    displayName: 'Format Check & Validate'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - checkout: self
+
+    # --------------------------------------------------------------------------
+    # Install a pinned Terraform version.
+    # Pinning prevents unexpected provider or syntax changes from breaking runs.
+    #
+    # Option A: TerraformInstaller@1 task (recommended for teams)
+    #           Requires "Terraform" extension from the ADO Marketplace
+    #           (ms-devlabs.custom-terraform-tasks). Caches the binary.
+    #           - task: TerraformInstaller@1
+    #             inputs:
+    #               terraformVersion: $(TF_VERSION)
+    #
+    # Option B: Script install (recommended for learning) ← used here
+    #           No extension required; one script, fully transparent.
+    # --------------------------------------------------------------------------
+    - script: |
+        curl -Lo terraform.zip \
+          https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+        terraform version
+      displayName: 'Install Terraform $(TF_VERSION)'
+
+    # 'terraform init' must run before fmt or validate because both commands
+    # need provider schema information downloaded during init.
+    # The -reconfigure flag mirrors the debug script: clears any cached backend
+    # config and forces a clean re-initialisation.
+    - script: |
+        terraform init -reconfigure \
+          -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+          -backend-config="resource_group_name=$(BACKEND_RG)" \
+          -backend-config="storage_account_name=$(BACKEND_SA)" \
+          -backend-config="container_name=$(BACKEND_CONTAINER)" \
+          -backend-config="key=$(BACKEND_KEY)"
+      displayName: 'Terraform Init'
+      workingDirectory: $(TF_WORKING_DIR)
+      env:
+        ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID:       $(ARM_TENANT_ID)
+
+    # 'fmt -check' exits with a non-zero code if any file is not formatted,
+    # failing the stage. Run 'terraform fmt -recursive' locally to fix.
+    - script: terraform fmt -check -recursive
+      displayName: 'Terraform Format Check'
+      workingDirectory: $(TF_WORKING_DIR)
+
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+      workingDirectory: $(TF_WORKING_DIR)
+      env:
+        ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID:       $(ARM_TENANT_ID)
+
+# ==============================================================================
+# STAGE 3: Plan (prod)
+# Generates a Terraform plan and saves it as a pipeline artifact.
+# The artifact is consumed by Apply so that stage runs the EXACT changeset
+# that was reviewed — prevents drift between Plan and Apply.
+# ==============================================================================
+- stage: PlanProd
+  displayName: '3 - Plan (prod)'
+  dependsOn: Validate
+  condition: succeeded()
+  jobs:
+
+  - job: TerraformPlan
+    displayName: 'Terraform Plan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - checkout: self
+
+    - script: |
+        curl -Lo terraform.zip \
+          https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+      displayName: 'Install Terraform $(TF_VERSION)'
+
+    - script: |
+        terraform init -reconfigure \
+          -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+          -backend-config="resource_group_name=$(BACKEND_RG)" \
+          -backend-config="storage_account_name=$(BACKEND_SA)" \
+          -backend-config="container_name=$(BACKEND_CONTAINER)" \
+          -backend-config="key=$(BACKEND_KEY)"
+      displayName: 'Terraform Init'
+      workingDirectory: $(TF_WORKING_DIR)
+      env:
+        ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID:       $(ARM_TENANT_ID)
+
+    # --------------------------------------------------------------------------
+    # Terraform variable injection — how to supply environment-specific values
+    #
+    # Option A: -var-file flag (recommended) ← used here
+    #           Non-sensitive config (network CIDRs, tags, container names,
+    #           etc.) lives in versioned .tfvars files checked into the repo.
+    #           Swap the file name to target a different environment:
+    #             prod → env/prod.tfvars
+    #             dev  → env/dev.tfvars
+    #             qa   → env/qa.tfvars
+    #
+    # Option B: TF_VAR_ environment variables
+    #           Terraform reads env vars named TF_VAR_<variable_name>
+    #           automatically. Useful to override a single value at pipeline
+    #           runtime without editing a .tfvars file.
+    #
+    # Option C: -var flags inline
+    #           commandOptions: '-var project=foo -var environment=prod'
+    #           Tedious for many variables but useful for one-off overrides.
+    #
+    # -detailed-exitcode returns:
+    #   0 = no changes, 1 = error, 2 = changes present
+    # This lets a downstream step detect a no-op plan if needed.
+    # --------------------------------------------------------------------------
+    - script: |
+        terraform plan \
+          -var-file=env/$(ENVIRONMENT).tfvars \
+          -out=$(Build.ArtifactStagingDirectory)/$(ENVIRONMENT).tfplan \
+          -detailed-exitcode
+      displayName: 'Terraform Plan - $(ENVIRONMENT)'
+      workingDirectory: $(TF_WORKING_DIR)
+      env:
+        ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID:       $(ARM_TENANT_ID)
+
+    # Save the binary plan file so Stage 4 can apply it.
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Plan Artifact'
+      inputs:
+        targetPath:      '$(Build.ArtifactStagingDirectory)/$(ENVIRONMENT).tfplan'
+        artifact:        '$(ENVIRONMENT)-tfplan'
+        publishLocation: 'pipeline'
+
+# ==============================================================================
+# STAGE 4: Apply (prod) — requires manual approval
+#
+# APPROVAL GATE:
+#   Option A: Azure DevOps Environment with Approvals (recommended) ← used here
+#             Create an Environment named "prod" in Pipelines > Environments.
+#             Add approvers under Approvals and Checks.
+#             The deployment job pauses here until all approvers click Approve.
+#
+#   Option B: ManualValidation@1 task (inline, no Environment needed)
+#             ADO emails the approvers and the pipeline waits for a response.
+#             - task: ManualValidation@1
+#               inputs:
+#                 notifyUsers: 'you@example.com'
+#                 instructions: 'Review the plan artifact then approve.'
+#                 onTimeout: 'reject'
+#
+#   Option C: No approval — apply automatically (not recommended for prod).
+# ==============================================================================
+- stage: ApplyProd
+  displayName: '4 - Apply (prod)'
+  dependsOn: PlanProd
+  condition: succeeded()
+  jobs:
+
+  # 'deployment' job type integrates with ADO Environments, enabling the
+  # approval gate and recording deployment history in the ADO UI.
+  - deployment: TerraformApply
+    displayName: 'Apply Terraform Changes'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'prod'   # Must match the Environment name in Pipelines > Environments
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          # Deployment jobs start in a different workspace directory.
+          # 'checkout: self' is required here to access the repo files.
+          - checkout: self
+
+          - script: |
+              curl -Lo terraform.zip \
+                https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+            displayName: 'Install Terraform $(TF_VERSION)'
+
+          - script: |
+              terraform init -reconfigure \
+                -backend-config="subscription_id=$(BACKEND_SUBSCRIPTION_ID)" \
+                -backend-config="resource_group_name=$(BACKEND_RG)" \
+                -backend-config="storage_account_name=$(BACKEND_SA)" \
+                -backend-config="container_name=$(BACKEND_CONTAINER)" \
+                -backend-config="key=$(BACKEND_KEY)"
+            displayName: 'Terraform Init'
+            workingDirectory: $(TF_WORKING_DIR)
+            env:
+              ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_TENANT_ID:       $(ARM_TENANT_ID)
+
+          # Download the exact plan generated in Stage 3.
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Plan Artifact'
+            inputs:
+              artifact: '$(ENVIRONMENT)-tfplan'
+              path:     '$(Pipeline.Workspace)/$(ENVIRONMENT)-tfplan'
+
+          # Apply the saved plan — no -var-file needed because all variable
+          # values are already baked into the binary plan file.
+          - script: |
+              terraform apply \
+                $(Pipeline.Workspace)/$(ENVIRONMENT)-tfplan/$(ENVIRONMENT).tfplan
+            displayName: 'Terraform Apply - $(ENVIRONMENT)'
+            workingDirectory: $(TF_WORKING_DIR)
+            env:
+              ARM_CLIENT_ID:       $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET:   $(ARM_CLIENT_SECRET)
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_TENANT_ID:       $(ARM_TENANT_ID)

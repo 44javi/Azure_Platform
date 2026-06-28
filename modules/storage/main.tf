@@ -31,6 +31,7 @@ resource "azurerm_storage_account" "adls" {
   allow_nested_items_to_be_public = var.allow_nested_items_to_be_public
   public_network_access_enabled   = var.public_network_access_enabled #false blocks access to containers on the portal
   #shared_access_key_enabled = false
+  default_to_oauth_authentication = true
 
   tags = var.default_tags
 

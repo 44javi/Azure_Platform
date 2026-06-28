@@ -26,18 +26,24 @@ variable "datalake_id" {
 }
 
 variable "key_vault_id" {
-  description = "ID of the Key Vault to store SSH keys"
+  description = "ID of the Key Vault used to store certificate or secret credentials. Not required when credential_type is 'federated'."
   type        = string
+  default     = null
+
+  validation {
+    condition     = var.credential_type == "federated" || var.key_vault_id != null
+    error_message = "key_vault_id is required when credential_type is 'certificate' or 'secret'."
+  }
 }
 
 variable "credential_type" {
-  description = "Type of credential to create for the service principal: 'certificate' or 'secret'"
+  description = "Type of credential to create for the service principal: 'certificate', 'secret', or 'federated'"
   type        = string
   default     = "secret"
 
   validation {
-    condition     = contains(["certificate", "secret"], var.credential_type)
-    error_message = "credential_type must be either 'certificate' or 'secret'."
+    condition     = contains(["certificate", "secret", "federated"], var.credential_type)
+    error_message = "credential_type must be one of 'certificate', 'secret', or 'federated'."
   }
 }
 
@@ -54,4 +60,21 @@ variable "role_assignments" {
     role_definition_name = string
   }))
   default = {}
+}
+
+variable "federated_identity_credentials" {
+  description = "Map of federated identity credentials to create when credential_type is 'federated'. For GitLab, issuer is the GitLab instance URL and subject is usually project_path:<group>/<project>:ref_type:<branch-or-tag>:ref:<ref-name>."
+  type = map(object({
+    display_name = optional(string)
+    description  = optional(string)
+    issuer       = string
+    subject      = string
+    audiences    = optional(list(string), ["api://AzureADTokenExchange"])
+  }))
+  default = {}
+
+  validation {
+    condition     = var.credential_type != "federated" || length(var.federated_identity_credentials) > 0
+    error_message = "federated_identity_credentials must contain at least one credential when credential_type is 'federated'."
+  }
 }

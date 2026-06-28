@@ -1,6 +1,12 @@
 resource "azurerm_resource_group" "main" {
   name     = "rg-${var.project}-${var.environment}"
   location = var.region
+
+  lifecycle {
+    # CreatedOnDate is stamped out-of-band by the stamp-rg-created-date policy
+    # (see cleanup_policy.tf); ignore it so Terraform does not fight the policy.
+    ignore_changes = [tags["CreatedOnDate"]]
+  }
 }
 
 # ############################################
