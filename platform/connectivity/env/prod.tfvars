@@ -2,7 +2,7 @@
 project      = "connectivity-hub"
 environment = "prod"
 
-region = "westus3"
+region = "westus2"
 
 alert_email = ""
 

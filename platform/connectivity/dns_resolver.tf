@@ -3,7 +3,7 @@ resource "azurerm_private_dns_resolver" "hub" {
   name                = "dnsresolver-${var.project}-${var.environment}"
   resource_group_name = azurerm_resource_group.main.name
   location            = var.region
-  virtual_network_id  = module.network_connectivity.vnet_id
+  virtual_network_id  = module.hub_vnet.vnet_id
   tags                = local.default_tags
 }
 
@@ -18,12 +18,12 @@ resource "azurerm_private_dns_resolver_inbound_endpoint" "hub" {
 
   ip_configurations {
     private_ip_allocation_method = "Dynamic"
-    subnet_id                    = module.network_connectivity.subnet_ids["dns_resolver"]
+    subnet_id                    = module.hub_subnets.subnet_ids["dns_resolver"]
   }
 
   lifecycle {
     precondition {
-      condition     = contains(keys(module.network_connectivity.subnet_ids), "dns_resolver")
+      condition     = contains(keys(module.hub_subnets.subnet_ids), "dns_resolver")
       error_message = "dns_resolver subnet must be present in var.subnets when enable_dns_resolver = true."
     }
   }

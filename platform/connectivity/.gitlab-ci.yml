@@ -1,0 +1,121 @@
+# GitLab CI — Connectivity Hub
+#
+# Authentication:
+#   Azure OIDC (Workload Identity Federation). GitLab mints AZURE_OIDC_TOKEN via
+#   id_tokens and Terraform exchanges it (ARM_USE_OIDC + ARM_OIDC_TOKEN). No
+#   Azure secret is stored. Two azurerm providers are used: the default one
+#   deploys into the connectivity subscription, the "management" alias reads from
+#   the management subscription. Both authenticate as the same SP.
+#
+# Required CI/CD variables (Settings > CI/CD > Variables; set at the group so
+# they inherit, or on this project):
+#   ARM_CLIENT_ID                 app registration (client) id of the deploy SP
+#   ARM_TENANT_ID                 Entra ID tenant id
+#   BACKEND_SUBSCRIPTION_ID       management subscription id (state account lives here)
+#   BACKEND_RESOURCE_GROUP        resource group containing the state account
+#   BACKEND_STORAGE_ACCOUNT       storage account used for Terraform state
+#   BACKEND_STORAGE_CONTAINER     container used for Terraform state
+#   CONNECTIVITY_SUBSCRIPTION_ID  subscription the hub resources deploy into
+#
+# The deploy SP needs:
+#   Storage Blob Data Contributor on the state storage account (management)
+#   Contributor (or a scoped custom role) on the connectivity subscription
+#   Reader on the management subscription
+#
+# Azure prerequisite: add a federated credential on ARM_CLIENT_ID that trusts
+#   issuer  https://gitlab.com
+#   subject project_path:<group>/<project>:ref_type:branch:ref:main
+#
+# Monorepo wiring: this is a component pipeline, not the repo root config. Either
+# point the project's CI/CD configuration file at it (Settings > CI/CD > General
+# pipelines), or include it from a root .gitlab-ci.yml:
+#   include:
+#     - local: platform/connectivity/.gitlab-ci.yml
+
+stages:
+  - validate
+  - plan
+  - apply
+  - destroy
+
+default:
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  # GitLab issues this JWT to the job; Azure trusts it via the federated
+  # credential. aud must match the credential's audience.
+  id_tokens:
+    AZURE_OIDC_TOKEN:
+      aud: api://AzureADTokenExchange
+
+variables:
+  TF_DIR: platform/connectivity
+  TFVARS: env/prod.tfvars
+  BACKEND_KEY: connectivity-prod
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"   
+  TF_VAR_connectivity_subscription_id: $CONNECTIVITY_SUBSCRIPTION_ID
+  TF_VAR_management_subscription_id: $BACKEND_SUBSCRIPTION_ID
+  TF_VAR_tenant_id: $ARM_TENANT_ID
+
+# Shared init: feed GitLab's OIDC token to the azurerm backend, then init.
+.tf_setup: &tf_setup
+  - cd "$TF_DIR"
+  - export ARM_OIDC_TOKEN="$AZURE_OIDC_TOKEN"
+  - export ARM_SUBSCRIPTION_ID="$BACKEND_SUBSCRIPTION_ID"
+  - terraform init -reconfigure -backend-config="subscription_id=$BACKEND_SUBSCRIPTION_ID" -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" -backend-config="container_name=$BACKEND_STORAGE_CONTAINER" -backend-config="key=$BACKEND_KEY"
+
+# fmt + validate.
+validate:
+  stage: validate
+  script:
+    - cd "$TF_DIR"
+    - terraform fmt -check -recursive
+    - terraform init -backend=false
+    - terraform validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [platform/connectivity/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [platform/connectivity/**/*]
+
+# Plan on MRs and on main. Saves the plan so apply uses exactly what was shown.
+plan:
+  stage: plan
+  before_script: *tf_setup
+  script:
+    - terraform plan -var-file="$TFVARS" -out=tfplan
+  artifacts:
+    paths:
+      - $TF_DIR/tfplan
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [platform/connectivity/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [platform/connectivity/**/*]
+
+# Apply on main, gated by a manual click (acts as the approval gate).
+apply:
+  stage: apply
+  before_script: *tf_setup
+  script:
+    - terraform apply -auto-approve tfplan
+  needs:
+    - job: plan
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [platform/connectivity/**/*]
+      when: manual
+      allow_failure: false
+
+# Destroy on main, manual only. Re-plans destroy at run time.
+destroy:
+  stage: destroy
+  before_script: *tf_setup
+  script:
+    - terraform destroy -auto-approve -var-file="$TFVARS"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual

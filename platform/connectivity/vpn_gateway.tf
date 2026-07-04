@@ -39,7 +39,7 @@ resource "azurerm_virtual_network_gateway" "vpn" {
     name                          = "vnetGatewayConfig"
     public_ip_address_id          = azurerm_public_ip.vpn_gateway[0].id
     private_ip_address_allocation = "Dynamic"
-    subnet_id                     = module.network_connectivity.subnet_ids["GatewaySubnet"]
+    subnet_id                     = module.hub_subnets.subnet_ids["GatewaySubnet"]
   }
 
   vpn_client_configuration {
@@ -68,7 +68,7 @@ resource "azurerm_virtual_network_gateway" "vpn" {
     ignore_changes = [vpn_client_configuration[0].root_certificate]
 
     precondition {
-      condition     = contains(keys(module.network_connectivity.subnet_ids), "GatewaySubnet")
+      condition     = contains(keys(module.hub_subnets.subnet_ids), "GatewaySubnet")
       error_message = "GatewaySubnet must be present in var.subnets when enable_vpn_gateway = true."
     }
     precondition {

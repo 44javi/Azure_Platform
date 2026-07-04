@@ -1,11 +1,11 @@
 output "hub_vnet_id" {
   description = "Hub VNet resource ID"
-  value       = module.network_connectivity.vnet_id
+  value       = module.hub_vnet.vnet_id
 }
 
 output "hub_vnet_name" {
   description = "Hub VNet name"
-  value       = module.network_connectivity.vnet_name
+  value       = module.hub_vnet.vnet_name
 }
 
 output "vpn_gateway_id" {
