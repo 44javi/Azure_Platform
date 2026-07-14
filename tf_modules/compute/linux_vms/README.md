@@ -115,7 +115,7 @@ Per-VM object (all optional except `subnet_id`):
 | Field | Default | Description |
 | --- | --- | --- |
 | `subnet_id` | - | Subnet for the NIC. |
-| `size` | `Standard_B2s` | VM size. |
+| `size` | `Standard_D2als_v7` | VM size. |
 | `admin_username` | `azureadmin` | Admin user for the break-glass SSH key. |
 | `zone` | none | Availability zone for the VM and its public IP. |
 | `private_ip_address` | dynamic | Static private IP when set. |

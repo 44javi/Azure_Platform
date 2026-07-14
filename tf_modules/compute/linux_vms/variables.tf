@@ -35,7 +35,7 @@ variable "virtual_machines" {
   description = "Linux VMs to create, keyed by short name (used in resource naming). Add new VMs here without changing module code."
   type = map(object({
     subnet_id      = string
-    size           = optional(string, "Standard_B2s")
+    size           = optional(string, "Standard_D2als_v7")
     admin_username = optional(string, "azureadmin")
     zone           = optional(string)
 
