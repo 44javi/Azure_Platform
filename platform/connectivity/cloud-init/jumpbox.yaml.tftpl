@@ -1,0 +1,33 @@
+#cloud-config
+# Jumpbox bootstrap: Docker + WireGuard VPN server container.
+#
+# The container generates the server keypair and one config (with QR code)
+# per peer under /opt/wireguard on first start. Keys never touch Terraform
+# state. Retrieve a client config over Entra ID SSH:
+#   az ssh vm -g <rg> -n <vm> -- sudo cat /opt/wireguard/peer_<name>/peer_<name>.conf
+#
+# SERVERURL=auto resolves the VM's public IP at container start, so the
+# config does not depend on the public IP resource.
+
+package_update: true
+packages:
+  - docker.io
+
+runcmd:
+  - systemctl enable --now docker
+  - >-
+    docker run -d --name wireguard
+    --restart unless-stopped
+    --cap-add NET_ADMIN
+    --sysctl net.ipv4.conf.all.src_valid_mark=1
+    --sysctl net.ipv4.ip_forward=1
+    -e PUID=1000 -e PGID=1000
+    -e SERVERURL=auto
+    -e SERVERPORT=51820
+    -e PEERS=${peers}
+    -e PEERDNS=${peer_dns}
+    -e ALLOWEDIPS=${allowed_ips}
+    -e INTERNAL_SUBNET=${internal_subnet}
+    -p 51820:51820/udp
+    -v /opt/wireguard:/config
+    lscr.io/linuxserver/wireguard:latest

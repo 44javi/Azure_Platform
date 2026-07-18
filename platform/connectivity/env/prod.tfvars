@@ -1,5 +1,5 @@
 # Resource Naming
-project      = "connectivity-hub"
+project      = "connectivity"
 environment = "prod"
 
 region = "westus2"
@@ -14,16 +14,18 @@ vnet_address_space = ["10.79.0.0/16"]
 
 # Private DNS zones — add a new line here to create a zone; spokes look them up via data source
 private_dns_zones = [
-  "privatelink.services.ai.azure.com", # Foundry account
-  "privatelink.openai.azure.com", # Foundry account
-  "privatelink.cognitiveservices.azure.com", # Foundry account
-  "privatelink.search.windows.net", # Search service
+  # "privatelink.services.ai.azure.com", # Foundry account
+  # "privatelink.openai.azure.com", # Foundry account
+  # "privatelink.cognitiveservices.azure.com", # Foundry account
+  # "privatelink.search.windows.net", # Search service
   "privatelink.blob.core.windows.net", # blob storage
   "privatelink.vaultcore.azure.net",
-  "privatelink.azurewebsites.net",
-  "privatelink.documents.azure.com",  # Cosmos DB
-  "privatelink.api.azureml.ms",
-  "privatelink.notebooks.azure.net"
+  # "privatelink.azurewebsites.net",
+  # "privatelink.documents.azure.com",  # Cosmos DB
+  # "privatelink.api.azureml.ms",
+  # "privatelink.notebooks.azure.net",
+  "privatelink.azuredatabricks.net", # Databricks front-end/back-end + browser auth
+  "privatelink.dfs.core.windows.net" # ADLS Gen2 (Databricks data plane)
 ]
 
 # Subnets managed by the network module.
@@ -49,6 +51,26 @@ subnets = {
       service_name = "Microsoft.Network/dnsResolvers"
       actions      = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     }
+  }
+
+  # Jumpbox subnet — hosts the WireGuard VPN server. Only the WireGuard UDP
+  # port is open to the internet. SSH rides inside the tunnel (never traverses the NSG), so port
+  # 22 stays closed. Default outbound stays enabled: Entra ID SSH login and
+  # SERVERURL=auto need outbound HTTPS.
+  jumpbox = {
+    address_prefix           = "10.79.250.0/28"
+    disable_default_outbound = false
+    nsg_rules = [
+      {
+        name                   = "Allow-WireGuard"
+        priority               = 1001
+        direction              = "Inbound"
+        access                 = "Allow"
+        protocol               = "Udp"
+        destination_port_range = "51820"
+        source_address_prefix  = "Internet"
+      },
+    ]
   }
 
 #   public = {
@@ -87,15 +109,29 @@ subnets = {
 # ---- DNS Private Resolver ----
 enable_dns_resolver = true
 
-# ---- VPN Gateway (Point-to-Site) ----
-enable_vpn_gateway = true
+# # ---- VPN Gateway (Point-to-Site) ----
+# enable_vpn_gateway = true
 
-# Defaults that work for most setups — override only if needed:
-vpn_gateway_sku         = "VpnGw1AZ"            # Max 128 SSTP / 250 IKEv2 P2S sessions
-vpn_client_protocols    = ["OpenVPN"]          # SSTP retired Mar 31 2026; IkeV2 is the Basic SKU replacement
-vpn_auth_types          = ["AAD"]    # Certificate auth works with IkeV2; use ["AAD"] + OpenVPN for larger deployments
-# vpn_client_address_pool = "172.16.201.0/24"  # IPs assigned to VPN clients
+# # Defaults that work for most setups — override only if needed:
+# vpn_gateway_sku         = "VpnGw1AZ"            # Max 128 SSTP / 250 IKEv2 P2S sessions
+# vpn_client_protocols    = ["OpenVPN"]          # SSTP retired Mar 31 2026; IkeV2 is the Basic SKU replacement
+# vpn_auth_types          = ["AAD"]    # Certificate auth works with IkeV2; use ["AAD"] + OpenVPN for larger deployments
+# # vpn_client_address_pool = "172.16.201.0/24"  # IPs assigned to VPN clients
 
-# # Certificate auth: root CA is pulled from mg_kv_name at apply time
-#   mg_kv_name     = "kv-management-prod-5209"   # your existing central KV
-#   mg_kv_rg       = "rg-management-prod"
+# Central management Key Vault — jumpbox break-glass SSH key, and root CA when
+# Certificate VPN auth is enabled.
+mg_kv_name = "kv-management-prod-5209"
+mg_kv_rg   = "rg-management-prod"
+
+# ---- Jumpbox / WireGuard VPN ----
+# Usually empty: org VM admin groups get sudo login (Virtual Machine
+# Administrator Login) at the management group scope in platform/management
+# and inherit it on this VM. Only list principals that need sudo on the
+# jumpbox alone, on top of that.
+# jumpbox_admin_login_principal_ids = ["<user-or-group-object-id>"]
+
+# One client config is generated per peer name (alphanumeric only).
+jumpbox_vpn_peers = ["laptop", "router"]
+
+# Spoke VNet CIDRs routed through the tunnel — extend as spokes are added.
+vpn_vnet_spoke_cidrs = ["10.80.0.0/16"]

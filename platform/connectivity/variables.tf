@@ -169,6 +169,36 @@ variable "vpn_root_cert_kv_secret_name" {
   default     = "p2s-root-cert-data"
 }
 
+# ---- Jumpbox ----
+
+variable "jumpbox_admin_login_principal_ids" {
+  description = "Entra ID user/group object IDs granted Virtual Machine Administrator Login (sudo) scoped to the jumpbox only. Org-wide VM admin groups are assigned at the management group scope and inherit here; do not repeat them."
+  type        = list(string)
+  default     = []
+}
+
+variable "jumpbox_vpn_peers" {
+  description = "WireGuard peer names; the server container generates one client config per name. Alphanumeric only. Adding a name creates a new client config on the VM."
+  type        = list(string)
+  default     = ["laptop"]
+  validation {
+    condition     = length([for p in var.jumpbox_vpn_peers : p if !can(regex("^[a-zA-Z0-9]+$", p))]) == 0
+    error_message = "Peer names must be alphanumeric (no dashes, underscores, or spaces)."
+  }
+}
+
+variable "vpn_vnet_spoke_cidrs" {
+  description = "Spoke VNet CIDRs (e.g. data platform, cyber parts) routed through the WireGuard tunnel, on top of the hub vnet_address_space."
+  type        = list(string)
+  default     = []
+}
+
+variable "jumpbox_vpn_internal_subnet" {
+  description = "Internal subnet the WireGuard server assigns to VPN clients. Must not overlap the hub, spokes, or vpn_client_address_pool."
+  type        = string
+  default     = "172.27.66.0/24"
+}
+
 # ---- Azure DNS Private Resolver ----
 
 variable "enable_dns_resolver" {
