@@ -1,17 +1,3 @@
-# Create Data Engineers Security Group
-resource "azuread_group" "data_engineers" {
-  display_name     = "Data_Engineers"
-  security_enabled = true
-  description      = "Group for data related access"
-}
-
-# Create Test team Security Group
-resource "azuread_group" "test_team" {
-  display_name     = "Test_Team"
-  security_enabled = true
-  description      = "Group for the test team to have access to Azure resources"
-}
-
 # Create External Security Group
 resource "azuread_group" "External_Users" {
   display_name     = "External_Users"
@@ -30,4 +16,36 @@ resource "azuread_group" "dbx_account_admins" {
   display_name     = "DBX_Account_Admins"
   security_enabled = true
   description      = "Group for users and principals to have access to the Databricks account console"
+}
+
+# Department groups with dynamic membership driven by the user.department attribute
+resource "azuread_group" "department" {
+  for_each         = var.department_groups
+  display_name     = each.value.display_name
+  security_enabled = true
+  description      = coalesce(each.value.description, "Dynamic group for the ${each.value.department} department")
+  types            = ["DynamicMembership"]
+
+  dynamic_membership {
+    enabled = true
+    rule    = "user.department -eq \"${each.value.department}\""
+  }
+}
+
+resource "azuread_group" "org_owners" {
+  display_name     = "${var.org}_Owners"
+  security_enabled = true
+  description      = "Group for owner permissions at the org management group"
+}
+
+resource "azuread_group" "org_vm_admins" {
+  display_name     = "${var.org}_VM_Admins"
+  security_enabled = true
+  description      = "Sudo login on platform VMs via Entra ID, assigned Virtual Machine Administrator Login at the Platform management group"
+}
+
+resource "azuread_group" "platform_vm_users" {
+  display_name     = "Platform_VM_Users"
+  security_enabled = true
+  description      = "Non-sudo login on platform VMs via Entra ID, assigned Virtual Machine User Login at the Platform management group"
 }

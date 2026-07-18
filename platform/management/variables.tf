@@ -19,6 +19,11 @@ variable "subscription_id" {
   type        = string
 }
 
+variable "org" {
+  description = "Name of the organization"
+  type        = string
+}
+
 variable "project" {
   description = "project name for resource naming."
   type        = string
@@ -66,6 +71,16 @@ variable "regions" {
 variable "created_by" {
   description = "Tag showing Terraform created this resource"
   type        = string
+}
+
+variable "department_groups" {
+  description = "Departments to create dynamic membership security groups for. Key is a short name, department must match the user.department attribute exactly. Members require Entra ID P1 licenses."
+  type = map(object({
+    display_name = string
+    department   = string
+    description  = optional(string)
+  }))
+  default = {}
 }
 
 variable "policies" {
